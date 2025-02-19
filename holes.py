@@ -176,18 +176,6 @@ def main():
                     st.text("Data will appear once selected")
             else:
                 user_filtered_data = pd.DataFrame() 
-            if st.sidebar.button("Help"):
-                st.sidebar.markdown("### Help")
-                st.sidebar.markdown("""
-                    This application allows you to analyze drillhole data. Here are the main features:
-                    
-                    - **Load Data**: Enter the name of the file (***must be .csv***) to load, including the extension (i.e., '.csv'). This file must contain all the data of interest in a flat format. If file is in same directory as app, then file name is sufficient. Otherwise, must entire full path.
-                    - **Filter Data**: Select variables to filter on and set value or range filters (visualizations are subsequently performed on the filtered subset).
-                    - **Downhole Plots**: Create downhole line plots by selecting the drillhole ID, 'From', 'To', and analytes to plot.
-                    - **Variability Analysis**: Group data by selected columns and calculate unique combinations and contribution proportions.
-                    - **Scatter Analysis**: Create scatter plots of two variables with optional trendlines (ordinary least squares).
-                    - **Box Plot**: Create box plots based on selected variables.
-                """)
         col1, col2 = st.columns([1, 1])
         if not user_filtered_data.empty:
             with col1:
