@@ -1,2 +1,0 @@
-# holeviewer
-drillhole atabase viewer
