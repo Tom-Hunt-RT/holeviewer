@@ -9,44 +9,23 @@ st.set_page_config(layout="wide")
 # Loading data to be used by application and assigning to variables
 def loaddata():
     st.write("### Load Data")
-    load_option = st.radio("Choose how to load the data:", ("Enter filename", "Drag and drop file"))
-
-    if load_option == "Enter filename":
-        filename = st.text_input("Enter name/path of file to load, including extension (e.g., '.csv')")
-        if filename:
+    uploaded_file = st.file_uploader("Choose a file")
+    if uploaded_file is not None:
+        try:
+            drillhole_db = pd.read_csv(uploaded_file, encoding='utf-8')
+        except UnicodeDecodeError:
             try:
-                drillhole_db = pd.read_csv(filename, encoding='utf-8')
+                drillhole_db = pd.read_csv(uploaded_file, encoding='latin1')
             except UnicodeDecodeError:
                 try:
-                    drillhole_db = pd.read_csv(filename, encoding='latin1')
+                    drillhole_db = pd.read_csv(uploaded_file, encoding='iso-8859-1')
                 except UnicodeDecodeError:
-                    try:
-                        drillhole_db = pd.read_csv(filename, encoding='iso-8859-1')
-                    except UnicodeDecodeError:
-                        st.error("Unable to read the file with UTF-8, Latin-1, or ISO-8859-1 encoding. Please check the file encoding.")
-                        return pd.DataFrame()
-            return drillhole_db
-        else:
-            st.warning("Please enter a (valid) filename.")
-            return pd.DataFrame()
-    elif load_option == "Drag and drop file":
-        uploaded_file = st.file_uploader("Choose a file")
-        if uploaded_file is not None:
-            try:
-                drillhole_db = pd.read_csv(uploaded_file, encoding='utf-8')
-            except UnicodeDecodeError:
-                try:
-                    drillhole_db = pd.read_csv(uploaded_file, encoding='latin1')
-                except UnicodeDecodeError:
-                    try:
-                        drillhole_db = pd.read_csv(uploaded_file, encoding='iso-8859-1')
-                    except UnicodeDecodeError:
-                        st.error("Unable to read the file with UTF-8, Latin-1, or ISO-8859-1 encoding. Please check the file encoding.")
-                        return pd.DataFrame()
-            return drillhole_db
-        else:
-            st.warning("Please upload a file.")
-            return pd.DataFrame()
+                    st.error("Unable to read the file with UTF-8, Latin-1, or ISO-8859-1 encoding. Please check the file encoding.")
+                    return pd.DataFrame()
+        return drillhole_db
+    else:
+        st.warning("Please upload a file.")
+        return pd.DataFrame()
 
 # Creating a list of the column headers that I might want to filter on
 def createvariables(inputdata):
