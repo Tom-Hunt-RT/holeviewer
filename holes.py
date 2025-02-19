@@ -1,9 +1,7 @@
 # Importing required packages
 import pandas as pd
 import streamlit as st
-import streamlit.web.cli as stcli
 import plotly.express as px
-import os, sys
 
 # Setting layout to be wide
 st.set_page_config(layout="wide")
