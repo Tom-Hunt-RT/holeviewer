@@ -10,28 +10,22 @@ st.set_page_config(layout="wide")
 def loaddata():
     st.write("### Load Data")
     uploaded_file = st.file_uploader("Choose a file")
-    
     if uploaded_file is not None:
-        encodings_to_try = ['utf-8', 'utf-8-sig', 'latin1', 'iso-8859-1']
-        
-        for encoding in encodings_to_try:
+        try:
+            drillhole_db = pd.read_csv(uploaded_file, encoding='utf-8')
+        except UnicodeDecodeError:
             try:
-                # Read the CSV using pandas while specifying the encoding
-                uploaded_file.seek(0)  # Reset the file pointer
-                drillhole_db = pd.read_csv(uploaded_file, encoding=encoding)
-                return drillhole_db  # Return if the file is read successfully
+                drillhole_db = pd.read_csv(uploaded_file, encoding='latin1')
             except UnicodeDecodeError:
-                continue  # Try next encoding if one fails
-        
-        # If all encodings fail, show an error
-        st.error("Unable to read the file with the tested encodings. Please check the file encoding.")
-        return pd.DataFrame()
-    
+                try:
+                    drillhole_db = pd.read_csv(uploaded_file, encoding='iso-8859-1')
+                except UnicodeDecodeError:
+                    st.error("Unable to read the file with UTF-8, Latin-1, or ISO-8859-1 encoding. Please check the file encoding.")
+                    return pd.DataFrame()
+        return drillhole_db
     else:
         st.warning("Please upload a file.")
         return pd.DataFrame()
-
-
 
 # Creating a list of the column headers that I might want to filter on
 def createvariables(inputdata):
@@ -105,7 +99,7 @@ def createdownholeplots(data):
     data[to_col] = pd.to_numeric(data[to_col], errors='coerce')
     
     data['Interval Midpoint'] = (data[from_col] + data[to_col]) / 2
-    id_vars = [holeid_col, from_col, to_col, 'Interval Midpoint']
+    id_vars = [holeid_col, from_col, to_col, 'Interval Midpoint'] + hover_data_options
     melted_data = data.melt(id_vars=id_vars,
                             value_vars=selected_analytes,
                             var_name='Analyte',
@@ -140,7 +134,7 @@ def variabilityanalysis(data):
         combinations["Percentage"] = (combinations["Count"] / combinations["Count"].sum()) * 100
         return combinations
     else:
-        return pd.DataFrame(columns=['Combination', 'Interval Count', 'Percentage of Intervals'])
+        return pd.DataFrame(columns=['Combination', 'Count', 'Percentage'])
 
 # Create a scatter plot based on variables of interest to user
 def scatteranalysis(data):
