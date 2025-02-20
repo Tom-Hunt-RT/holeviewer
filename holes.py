@@ -10,28 +10,39 @@ st.set_page_config(layout="wide")
 def loaddata():
     st.write("### Load Data")
     uploaded_file = st.file_uploader("Choose a file")
+
     if uploaded_file is not None:
+        # Try to read the file with Latin encoding (latin1 or iso-8859-1)
         try:
-            drillhole_db = pd.read_csv(uploaded_file, encoding='utf-8')
+            # Attempt to read with Latin-1 encoding
+            drillhole_db = pd.read_csv(uploaded_file, encoding='latin1')  # You can also try 'iso-8859-1'
+            st.success("Successfully read the file with Latin encoding (latin1).")
         except UnicodeDecodeError:
-            try:
-                drillhole_db = pd.read_csv(uploaded_file, encoding='latin1')
-            except UnicodeDecodeError:
-                try:
-                    drillhole_db = pd.read_csv(uploaded_file, encoding='iso-8859-1')
-                except UnicodeDecodeError:
-                    st.error("Unable to read the file with UTF-8, Latin-1, or ISO-8859-1 encoding. Please check the file encoding.")
-                    return pd.DataFrame()
+            st.error("Unable to read the file with Latin encoding. Please check the file encoding.")
+            return pd.DataFrame()
+
+        # Convert to UTF-8 encoding
+        # Save the dataframe as UTF-8 (the headers should now be correct)
+        drillhole_db = drillhole_db.applymap(lambda x: str(x) if isinstance(x, bytes) else x)
+
+        # Return the dataframe after conversion
         return drillhole_db
     else:
         st.warning("Please upload a file.")
         return pd.DataFrame()
 
+
+
 # Creating a list of the column headers that I might want to filter on
 def createvariables(inputdata):
     if not inputdata.empty:
-        variables = inputdata.columns
-        variables = list(variables)
+        # Check if columns are meaningful
+        if inputdata.columns.isnull().any() or (inputdata.columns.str.strip() == '').any():
+            st.warning("The data contains columns with missing or empty names.")
+            return []
+        
+        # If column names are valid, return them
+        variables = inputdata.columns.tolist()
         return variables
     else:
         st.warning("No data available to create variables.")
@@ -87,6 +98,7 @@ def filterdata(filters, data):
 def createdownholeplots(data):
     with st.expander("Downhole Plot Options", expanded=False):
         # Ensure user selects Holeid, From, and To columns
+        all_options = data.columns
         holeid_col = st.selectbox("Select 'Drillhole ID' column", options=data.columns)
         from_col = st.selectbox("Select 'From' column", options=data.columns)
         to_col = st.selectbox("Select 'To' column", options=data.columns)        
@@ -99,7 +111,7 @@ def createdownholeplots(data):
     data[to_col] = pd.to_numeric(data[to_col], errors='coerce')
     
     data['Interval Midpoint'] = (data[from_col] + data[to_col]) / 2
-    id_vars = [holeid_col, from_col, to_col, 'Interval Midpoint'] + hover_data_options
+    id_vars = [holeid_col, from_col, to_col, 'Interval Midpoint', selected_color]
     melted_data = data.melt(id_vars=id_vars,
                             value_vars=selected_analytes,
                             var_name='Analyte',
@@ -134,7 +146,7 @@ def variabilityanalysis(data):
         combinations["Percentage"] = (combinations["Count"] / combinations["Count"].sum()) * 100
         return combinations
     else:
-        return pd.DataFrame(columns=['Combination', 'Count', 'Percentage'])
+        return pd.DataFrame(columns=['Combination', 'Interval Count', 'Percentage of Intervals'])
 
 # Create a scatter plot based on variables of interest to user
 def scatteranalysis(data):
