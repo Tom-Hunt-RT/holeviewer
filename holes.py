@@ -12,34 +12,23 @@ def loaddata():
     uploaded_file = st.file_uploader("Choose a file")
 
     if uploaded_file is not None:
-        # Try reading the file with common encodings
         encodings = ['utf-8', 'latin1', 'iso-8859-1']
         for encoding in encodings:
             try:
-                # Attempt to read the file with the current encoding
                 drillhole_db = pd.read_csv(uploaded_file, encoding=encoding)
-                st.success(f"Successfully read the file with {encoding} encoding.")
-                break  # Exit the loop if reading is successful
+                st.success(f"Successfully read the file.")
+                break
             except UnicodeDecodeError:
-                continue  # Try the next encoding if an error occurs
+                continue 
 
         else:
-            # If no encoding worked, show an error
             st.error("Unable to read the file with common encodings. Please check the file encoding.")
             return pd.DataFrame()
-
-        # Convert the DataFrame to UTF-8 encoding
-        # Ensure all string columns are in UTF-8 format
         drillhole_db = drillhole_db.applymap(lambda x: str(x) if isinstance(x, bytes) else x)
-
-        # Return the dataframe after conversion
         return drillhole_db
     else:
         st.warning("Please upload a file.")
         return pd.DataFrame()
-
-
-
 
 # Creating a list of the column headers that I might want to filter on
 def createvariables(inputdata):
