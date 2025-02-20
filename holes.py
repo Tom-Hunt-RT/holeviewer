@@ -6,17 +6,22 @@ import plotly.express as px
 # Setting layout to be wide
 st.set_page_config(layout="wide")
 
-# Loading data to be used by application and assigning to variables
 def loaddata():
     st.write("### Load Data")
     uploaded_file = st.file_uploader("Choose a file")
+
     if uploaded_file is not None:
+        # Reset file pointer to the beginning if it's being re-read
+        uploaded_file.seek(0)
+        
         try:
             drillhole_db = pd.read_csv(uploaded_file, encoding='utf-8')
         except UnicodeDecodeError:
+            uploaded_file.seek(0)  # Reset to the start of the file again
             try:
                 drillhole_db = pd.read_csv(uploaded_file, encoding='latin1')
             except UnicodeDecodeError:
+                uploaded_file.seek(0)  # Reset to the start of the file
                 try:
                     drillhole_db = pd.read_csv(uploaded_file, encoding='iso-8859-1')
                 except UnicodeDecodeError:
