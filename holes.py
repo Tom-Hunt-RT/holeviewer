@@ -344,7 +344,7 @@ def main():
         if len(selectedvariables) == 0:
             st.warning("Please select at least one variable to filter on.")
         else:
-            tab1, tab2 = st.tabs(["General Analysis", "Sample Selection Assistant"])
+            tab1, tab2, tab3 = st.tabs(["General Analysis", "Seample Selection Assistant", "Help"])
             with tab1:
                 col1, col2 = st.columns([1, 1])
                 if not user_filtered_data.empty:
@@ -376,9 +376,48 @@ def main():
                             st.header("Filtered Data Display")
                             st.write(user_filtered_data)
             with tab2:
-                sampleselectioncontainer = st.container(border=True)
-                with sampleselectioncontainer:
-                    sampleselectionassistant(user_filtered_data)
+                with st.expander("Sample Selection Assistant"):
+                    sampleselectioncontainer = st.container(border=True)
+                    with sampleselectioncontainer:
+                        sampleselectionassistant(user_filtered_data)
+            with tab3:
+                st.header("Help Section")
+                st.write("""
+                ## How to Use This Application
+
+                This application allows you to analyze drillhole data through various plots and analyses. Here is a step-by-step guide on how to use it:
+
+                1. **Upload Data**: Use the sidebar to upload your drillhole data file. The file should be in CSV format.
+                2. **Filter Data**: Select the variables you want to filter on and apply the desired filters. This will be used in all subsequent analyses.
+                3. **Select Analysis**: Choose the type of analysis you want to perform:
+                    - **Downhole Line Plot**: Visualize the data along/down the drillhole.
+                    - **Interval Variability Analysis**: Analyze the variability of intervals with respect to different paramenters (e.g., lithology and alteration types).
+                    - **Scatter Analysis**: Create scatter plots to visualize relationships between variables.
+                    - **Box Plot**: Create box plots to visualize the distribution of variables.
+                4. **Sample Selection Assistant**: Use this tool to assist in selecting samples based on various criteria (e.g., mass requirements and cut off grade).
+
+                ## What This Application Can Do
+
+                - Load and display drillhole data from a CSV file.
+                - Filter data based on user-selected criteria.
+                - Generate downhole line plots, scatter plots, and box plots.
+                - Perform interval variability analysis.
+                - Assist in sample selection based on user-defined parameters.
+
+                ## What This Application Can't Do
+
+                - Handle non-CSV file formats.
+                - Automatically detect and correct data quality issues.
+                - Perform advanced statistical analyses beyond the provided plots and analyses.
+
+                ## Potential Issues and How to Avoid Them
+
+                - **File Upload Issues**: Ensure the file is in CSV format and encoded in UTF-8, Latin-1, or ISO-8859-1 (probably will be one of the 3...).
+                - **Data Quality**: Ensure the data is clean and properly formatted. Missing or non-numeric values in critical columns can cause errors.
+                - **Filter Selection**: Be cautious when applying multiple filters, as overly restrictive filters may result in no data being displayed.
+
+                If you encounter any issues, please refer to the error log for more details.
+                """)
     except Exception as e:
         with st.expander("**Error Log**", expanded=False):
             st.error(f"An error occurred: {e}")
