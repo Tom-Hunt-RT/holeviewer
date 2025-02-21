@@ -314,10 +314,9 @@ def main():
                             st.header("Filtered Data Display")
                             st.write(user_filtered_data)
             with tab2:
-                with st.expander("Sample Selection Assistant"):
-                    sampleselectioncontainer = st.container(border=True)
-                    with sampleselectioncontainer:
-                        sampleselectionassistant(user_filtered_data)
+                sampleselectioncontainer = st.container(border=True)
+                with sampleselectioncontainer:
+                    sampleselectionassistant(user_filtered_data)
     except Exception as e:
         with st.expander("**Error Log**", expanded=False):
             st.error(f"An error occurred: {e}")
