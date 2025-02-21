@@ -121,12 +121,16 @@ def createdownholeplots(data):
 def variabilityanalysis(data):
     holeid_col = st.selectbox("Select 'Drillhole ID' column for variability analysis", options=data.columns, index=st.session_state.get('variability_holeid_col_index', 0))
     st.session_state['variability_holeid_col_index'] = data.columns.get_loc(holeid_col)
+    from_col = st.selectbox("Select 'From' column for variability analysis", options=data.columns, index=st.session_state.get('variability_from_col_index', 0))
+    st.session_state['variability_from_col_index'] = data.columns.get_loc(from_col)
+    to_col = st.selectbox("Select 'To' column for variability analysis", options=data.columns, index=st.session_state.get('variability_to_col_index', 0))
+    st.session_state['variability_to_col_index'] = data.columns.get_loc(to_col)
     groupby_columns = st.multiselect("Select columns to group by", options=data.columns, default=st.session_state.get('variability_groupby_columns', []))
     st.session_state['variability_groupby_columns'] = groupby_columns
     value_column = st.selectbox("Select value column to average", options=data.columns, index=st.session_state.get('variability_value_col_index', 0))
     st.session_state['variability_value_col_index'] = data.columns.get_loc(value_column)
     if groupby_columns:
-        data['unique_id'] = data[holeid_col].astype(str) + '_' + data['From'].astype(str) + '_' + data['To'].astype(str)
+        data['unique_id'] = data[holeid_col].astype(str) + '_' + data[from_col].astype(str) + '_' + data[to_col].astype(str)
         combinations = data.groupby(groupby_columns)['unique_id'].nunique().reset_index()
         combinations = combinations.rename(columns={'unique_id': 'Count'})
         combinations['Combination'] = combinations[groupby_columns].apply(lambda row: '_'.join(row.values.astype(str)), axis=1)
