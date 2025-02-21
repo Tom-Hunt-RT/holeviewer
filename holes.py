@@ -344,7 +344,7 @@ def main():
         if len(selectedvariables) == 0:
             st.warning("Please select at least one variable to filter on.")
         else:
-            tab1, tab2 = st.tabs(["General Analysis", "Seample Selection Assistant"])
+            tab1, tab2 = st.tabs(["General Analysis", "Sample Selection Assistant"])
             with tab1:
                 col1, col2 = st.columns([1, 1])
                 if not user_filtered_data.empty:
