@@ -111,10 +111,12 @@ def createdownholeplots(data):
     id_vars = [holeid_col, from_col, to_col, 'Interval Midpoint'] + hover_data_options
     melted_data = data.melt(id_vars=id_vars, value_vars=selected_analytes, var_name='Analyte', value_name='Result')
 
-    downholeplot = px.line(melted_data, x='Result', y='Interval Midpoint', color=selected_color, line_group=holeid_col, markers=True, height=800, facet_col='Analyte', facet_col_wrap=4, hover_data={col: True for col in hover_data_options})
+    downholeplot = px.line(melted_data, x='Result', y='Interval Midpoint', color=selected_color, line_group=holeid_col, markers=True, facet_col='Analyte', facet_col_wrap=4, hover_data={col: True for col in hover_data_options})
     downholeplot.update_yaxes(autorange='reversed')
     downholeplot.update_xaxes(matches=None)
-    downholeplot.update_layout(xaxis_title='Results', yaxis_title='Interval Midpoint', title='Results by Drill Hole and Interval Midpoint', height=1500)
+    stretchy_height = st.slider("Slide to stretch the y-axis", min_value=300, max_value=5000, value=1800, step=10, key="stretchy_height")
+    stretchy_width = st.slider("Slide to stretch the x-axis", min_value=300, max_value=5000, value=1800, step=10, key="stretchy_width")
+    downholeplot.update_layout(xaxis_title='Results', yaxis_title='Interval Midpoint', title='Results by Drill Hole and Interval Midpoint', height=stretchy_height, width=stretchy_width)
     st.plotly_chart(downholeplot, key="downholeplot")
 
 # Calculcate unique combos of values
@@ -134,25 +136,25 @@ def variabilityanalysis(data):
         combinations = data.groupby(groupby_columns)['unique_id'].nunique().reset_index()
         combinations = combinations.rename(columns={'unique_id': 'Count'})
         combinations['Combination'] = combinations[groupby_columns].apply(lambda row: '_'.join(row.values.astype(str)), axis=1)
-        combinations["Percentage"] = (combinations["Count"] / combinations["Count"].sum()) * 100
+        combinations["Counts_Percentage"] = (combinations["Count"] / combinations["Count"].sum()) * 100
         combinations["Mean Value"] = data.groupby(groupby_columns)[value_column].mean().values
         combinations["Median Value"] = data.groupby(groupby_columns)[value_column].median().values
         combinations["Min Value"] = data.groupby(groupby_columns)[value_column].min().values
         combinations["Max Value"] = data.groupby(groupby_columns)[value_column].max().values
         combinations["Range"] = combinations["Max Value"] - combinations["Min Value"]
-        fig = px.bar(combinations, x='Combination', y='Mean Value', title=f'Mean {value_column} value with respect to {groupby_columns}', color='Percentage', color_continuous_scale='Viridis')
-        fig2 = px.bar(combinations, x='Combination', y='Median Value', title=f'Median {value_column} value with respect to {groupby_columns}', color='Percentage', color_continuous_scale='Viridis')
+        fig = px.bar(combinations, x='Combination', y='Mean Value', title=f'Mean {value_column} value with respect to {groupby_columns}', color='Counts_Percentage', color_continuous_scale='Viridis')
+        fig2 = px.bar(combinations, x='Combination', y='Median Value', title=f'Median {value_column} value with respect to {groupby_columns}', color='Counts_Percentage', color_continuous_scale='Viridis')
         st.plotly_chart(fig, key="variabilityplot")
         st.plotly_chart(fig2, key="variabilityplot2")
         st.write(combinations)
         return combinations
     else:
-        return pd.DataFrame(columns=['Combination', 'Count', 'Percentage', 'Mean Value', 'Median Value', 'Min Value', 'Max Value', 'Range'])
+        return pd.DataFrame(columns=['Combination', 'Count', 'Counts_Percentage', 'Mean Value', 'Median Value', 'Min Value', 'Max Value', 'Range'])
 
 # Create a sample selection assistant
 def sampleselectionassistant(data):
     screening_method = st.selectbox("Select screening method", options=["Pre-screening (by interval)", "Post-screening (by composite)"])
-    categorical_cols = st.multiselect("Select categorical variables for filtering", options=data.columns)
+    categorical_cols = st.multiselect("Select categorical variables for filtering (i.e., your subset for analysis)", options=data.columns)
     
     unique_values = {}
     for cat_col in categorical_cols:
@@ -162,19 +164,19 @@ def sampleselectionassistant(data):
     for cat_col in categorical_cols:
         categorical_vals[cat_col] = st.multiselect(f"Select categorical values for {cat_col} filtering", options=unique_values[cat_col])
     
-    parameter_col = st.selectbox("Select parameter to analyze (e.g., Cu_pct)", options=data.columns)
+    parameter_col = st.selectbox("Select parameter to analyze (e.g., Cu_pct, K_pct, CuCN etc.)", options=data.columns)
     target_value = st.number_input(f"Enter target value for {parameter_col}", min_value=0.0)
     
-    percentage_range = st.number_input("Enter percentage range for interval selection", min_value=0, max_value=100)
+    percentage_range = st.number_input("Enter allowable deviation as a percentage of target value", min_value=0.0, max_value=1000.0)
     
-    apply_mass_filter = st.checkbox("Apply mass filter (define minimum mass requirement)")
+    apply_mass_filter = st.checkbox("Apply mass filter (define minimum mass requirement for composite)")
     if apply_mass_filter:
         required_mass = st.number_input("Enter required mass (unit agnostic)", min_value=0.0)
-        mass_per_unit = st.number_input("Enter mass per unit (same unit as above)", min_value=0.0)
+        mass_per_unit = st.number_input("Enter mass per unit of length (units = To - From)", min_value=0.0)
     else:
         mass_per_unit = None
     
-    holeid_col = st.selectbox("Select 'Drillhole ID' column", options=data.columns)
+    holeid_col = st.selectbox("Select 'HoleID' column", options=data.columns)
     from_col = st.selectbox("Select 'From' column", options=data.columns)
     to_col = st.selectbox("Select 'To' column", options=data.columns)
     
@@ -217,7 +219,7 @@ def sampleselectionassistant(data):
                     if current_composite:
                         avg_parameter_value = pd.Series([r[parameter_col] for r in current_composite]).mean()
                         composite_intervals.append({
-                            'Drillhole_ID': current_composite[0][holeid_col],
+                            'HoleID': current_composite[0][holeid_col],
                             'From': current_composite[0][from_col],
                             'To': current_composite[-1][to_col],
                             'Total_Mass': current_mass,
@@ -229,7 +231,7 @@ def sampleselectionassistant(data):
             if current_composite:
                 avg_parameter_value = pd.Series([r[parameter_col] for r in current_composite]).mean()
                 composite_intervals.append({
-                    'Drillhole_ID': current_composite[0][holeid_col],
+                    'HoleID': current_composite[0][holeid_col],
                     'From': current_composite[0][from_col],
                     'To': current_composite[-1][to_col],
                     'Total_Mass': current_mass,
@@ -273,7 +275,7 @@ def sampleselectionassistant(data):
                             # Create a smaller composite from this batch of intervals
                             avg_parameter_value = pd.Series([r[parameter_col] for r in current_composite]).mean()
                             composite_intervals.append({
-                                'Drillhole_ID': current_composite[0][holeid_col],
+                                'HoleID': current_composite[0][holeid_col],
                                 'From': current_composite[0][from_col],
                                 'To': current_composite[-1][to_col],
                                 'Total_Mass': current_mass,
@@ -295,7 +297,7 @@ def sampleselectionassistant(data):
             if current_composite and current_mass >= required_mass:
                 avg_parameter_value = pd.Series([r[parameter_col] for r in current_composite]).mean()
                 composite_intervals.append({
-                    'Drillhole_ID': current_composite[0][holeid_col],
+                    'HoleID': current_composite[0][holeid_col],
                     'From': current_composite[0][from_col],
                     'To': current_composite[-1][to_col],
                     'Total_Mass': current_mass,
@@ -358,84 +360,82 @@ def main():
                 user_filtered_data = pd.DataFrame()
         
         if len(selectedvariables) == 0:
-            st.warning("Please select at least one variable to filter on.")
+            st.warning("Please select at least one variable to filter on. If you want everything, select 'HoleID' (or equivalent), then 'Select All'.")
         else:
-            tab1, tab2, tab3 = st.tabs(["General Analysis", "Seample Selection Assistant", "Help Me!"])
+            tab1, tab2, tab3, tab4, tab5 = st.tabs(["Downhole Plot", "Interval Variability Analysis", "Scatter Plot", "Box Plot", "Sample Selection Assistant"])
+            with st.expander("Show Filtered Data"):
+                tablecontainer = st.container(border=True)
+                with tablecontainer:
+                    st.header("Filtered Data Display")
+                    st.write(user_filtered_data)
             with tab1:
-                col1, col2 = st.columns([1, 1])
                 if not user_filtered_data.empty:
-                    with col1:
-                        if st.checkbox("Show Downhole Line Plot"):
-                            downholecontainer = st.container(border=True)
-                            with downholecontainer:
-                                st.header("Downhole Line Plot")
-                                createdownholeplots(user_filtered_data)
-                        if st.checkbox("Show Interval Variability Analysis"):
-                            variabilitycontainer = st.container(border=True)
-                            with variabilitycontainer:
-                                variabilityanalyses = variabilityanalysis(user_filtered_data)
-                                st.write(f"Number of Intervals Remaining: {variabilityanalyses['Count'].sum()}")
-                    with col2:
-                        if st.checkbox("Show Scatter Analysis"):
-                            scattercontainer = st.container(border=True)
-                            with scattercontainer:
-                                st.header("Scatter Analysis")
-                                scatteranalysis(user_filtered_data.reset_index(drop=True))
-                        if st.checkbox("Show Box Plot"):
-                            boxplotcontainer = st.container(border=True)
-                            with boxplotcontainer:
-                                st.header("Box Plot")
-                                boxplot(user_filtered_data)
-                    with st.expander("Show Filtered Data"):
-                        tablecontainer = st.container(border=True)
-                        with tablecontainer:
-                            st.header("Filtered Data Display")
-                            st.write(user_filtered_data)
+                    downholecontainer = st.container(border=True)
+                    with downholecontainer:
+                        st.header("Downhole Line Plot")
+                        createdownholeplots(user_filtered_data)
             with tab2:
-                with st.expander("Sample Selection Assistant"):
-                    sampleselectioncontainer = st.container(border=True)
-                    with sampleselectioncontainer:
-                        sampleselectionassistant(user_filtered_data)
+                if not user_filtered_data.empty:
+                    variabilitycontainer = st.container(border=True)
+                    with variabilitycontainer:
+                        variabilityanalyses = variabilityanalysis(user_filtered_data)
+                        st.write(f"Number of Intervals Remaining: {variabilityanalyses['Count'].sum()}")
             with tab3:
-                st.write("""
-                ## How to Use This Application
-
-                This application allows you to analyze drillhole data through various plots and analyses. Here is a step-by-step guide on how to use it:
-
-                1. **Upload Data**: Use the sidebar to upload your drillhole data file. The file should be in CSV format.
-                2. **Filter Data**: Select the variables you want to filter on and apply the desired filters. This will be used in all subsequent analyses.
-                3. **Select Analysis**: Choose the type of analysis you want to perform:
-                    - **Downhole Line Plot**: Visualize the data along/down the drillhole.
-                    - **Interval Variability Analysis**: Analyze the variability of intervals with respect to different paramenters (e.g., lithology and alteration types).
-                    - **Scatter Analysis**: Create scatter plots to visualize relationships between variables.
-                    - **Box Plot**: Create box plots to visualize the distribution of variables.
-                4. **Sample Selection Assistant**: Use this tool to assist in selecting samples based on various criteria (e.g., mass requirements and cut off grade).
-
-                ## What This Application Can Do
-
-                - Load and display drillhole data from a CSV file.
-                - Filter data based on user-selected criteria.
-                - Generate downhole line plots, scatter plots, and box plots.
-                - Perform interval variability analysis.
-                - Assist in sample selection based on user-defined parameters.
-
-                ## What This Application Can't Do
-
-                - Handle non-CSV file formats.
-                - Automatically detect and correct data quality issues.
-                - Perform advanced statistical analyses beyond the provided plots and analyses.
-
-                ## Potential Issues and How to Avoid Them
-
-                - **File Upload Issues**: Ensure the file is in CSV format and encoded in UTF-8, Latin-1, or ISO-8859-1 (probably will be one of the 3...).
-                - **Data Quality**: Ensure the data is clean and properly formatted. Missing or non-numeric values in critical columns can cause errors.
-                - **Filter Selection**: Be cautious when applying multiple filters, as overly restrictive filters may result in no data being displayed.
-
-                If you encounter any issues, please refer to the error log for more details.
-                """)
+                if not user_filtered_data.empty:
+                    scattercontainer = st.container(border=True)
+                    with scattercontainer:
+                        st.header("Scatter Analysis")
+                        scatteranalysis(user_filtered_data.reset_index(drop=True))
+            with tab4:
+                if not user_filtered_data.empty:
+                    boxplotcontainer = st.container(border=True)
+                    with boxplotcontainer:
+                        st.header("Box Plot")
+                        boxplot(user_filtered_data)
+            with tab5:
+                sampleselectioncontainer = st.container(border=True)
+                with sampleselectioncontainer:
+                    sampleselectionassistant(user_filtered_data)
     except Exception as e:
-        with st.expander("**Error Log**", expanded=False):
-            st.error(f"An error occurred: {e}. This must be a terrible application...")
+        with st.expander("Error Log", expanded=False):
+            st.error(f"Don't panic - errors are expected and don't mean that something is going wrong. However:  \n  \n**An error occurred:** {e}.  \n  \nThis must be a terrible application...")
+    with st.expander("Help"):
+        st.write("""
+        ## How to Use This Application
+
+        This application allows you to analyze drillhole data through various plots and analyses. Here is a step-by-step guide on how to use it:
+
+        1. **Upload Data**: Use the sidebar to upload your drillhole data file. The file should be in CSV format.
+        2. **Filter Data**: Select the variables you want to filter on and apply the desired filters. This will be used in all subsequent analyses.
+        3. **Select Analysis**: Choose the type of analysis you want to perform:
+            - **Downhole Line Plot**: Visualize the data along/down the drillhole.
+            - **Interval Variability Analysis**: Analyze the variability of intervals with respect to different paramenters (e.g., lithology and alteration types).
+            - **Scatter Analysis**: Create scatter plots to visualize relationships between variables.
+            - **Box Plot**: Create box plots to visualize the distribution of variables.
+        4. **Sample Selection Assistant**: Use this tool to assist in selecting samples based on various criteria (e.g., mass requirements and cut off grade).
+
+        ## What This Application Can Do
+
+        - Load and display drillhole data from a CSV file.
+        - Filter data based on user-selected criteria.
+        - Generate downhole line plots, scatter plots, and box plots.
+        - Perform interval variability analysis.
+        - Assist in sample selection based on user-defined parameters.
+
+        ## What This Application Can't Do
+
+        - Handle non-CSV file formats.
+        - Automatically detect and correct data quality issues.
+        - Perform advanced statistical analyses beyond the provided plots and analyses.
+
+        ## Potential Issues and How to Avoid Them
+
+        - **File Upload Issues**: Ensure the file is in CSV format and encoded in UTF-8, Latin-1, or ISO-8859-1 (probably will be one of the 3...).
+        - **Data Quality**: Ensure the data is clean and properly formatted. Missing or non-numeric values in critical columns can cause errors.
+        - **Filter Selection**: Be cautious when applying multiple filters, as overly restrictive filters may result in no data being displayed.
+
+        If you encounter any issues, please refer to the error log for more details.
+        """)
 
 # Having script execute as per convention
 if __name__ == "__main__":
