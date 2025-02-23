@@ -260,23 +260,39 @@ def sampleselectionassistant(data):
             current_mass = 0
 
             for _, row in representative_intervals.iterrows():
-                if current_composite and row[holeid_col] == current_composite[-1][holeid_col] and row[from_col] == current_composite[-1][to_col]:
+                # If adding this interval causes the current mass to exceed required_mass
+                if current_mass + row['Mass'] >= required_mass:
+                    # Check if we can form valid smaller composites
+                    while current_mass + row['Mass'] >= required_mass:
+                        # Split the composite such that the smaller composite meets the required mass
+                        remaining_mass = required_mass - current_mass
+                        if remaining_mass > 0:
+                            # Add the current composite up to the required mass
+                            current_composite.append(row)
+                            current_mass += row['Mass']
+                            # Create a smaller composite from this batch of intervals
+                            avg_parameter_value = pd.Series([r[parameter_col] for r in current_composite]).mean()
+                            composite_intervals.append({
+                                'Drillhole_ID': current_composite[0][holeid_col],
+                                'From': current_composite[0][from_col],
+                                'To': current_composite[-1][to_col],
+                                'Total_Mass': current_mass,
+                                'Average_Parameter': avg_parameter_value
+                            })
+                            # Reset the composite for the next round
+                            current_composite = []
+                            current_mass = 0
+                        else:
+                            # Continue adding to the composite if we still can't reach required_mass
+                            current_composite.append(row)
+                            current_mass += row['Mass']
+                else:
+                    # Add the row to the current composite if it doesn't exceed required_mass
                     current_composite.append(row)
                     current_mass += row['Mass']
-                else:
-                    if current_composite:
-                        avg_parameter_value = pd.Series([r[parameter_col] for r in current_composite]).mean()
-                        composite_intervals.append({
-                            'Drillhole_ID': current_composite[0][holeid_col],
-                            'From': current_composite[0][from_col],
-                            'To': current_composite[-1][to_col],
-                            'Total_Mass': current_mass,
-                            'Average_Parameter': avg_parameter_value
-                        })
-                    current_composite = [row]
-                    current_mass = row['Mass']
 
-            if current_composite:
+            # After the loop, ensure any remaining composite is added (if it meets the required mass)
+            if current_composite and current_mass >= required_mass:
                 avg_parameter_value = pd.Series([r[parameter_col] for r in current_composite]).mean()
                 composite_intervals.append({
                     'Drillhole_ID': current_composite[0][holeid_col],
@@ -300,7 +316,6 @@ def sampleselectionassistant(data):
         else:
             st.write("### Representative Intervals based on selection method:")
             st.write(representative_intervals)
-
 
 # Create a scatter plot based on variables of interest to user
 def scatteranalysis(data):
@@ -331,7 +346,8 @@ def main():
             st.cache_data()
             drillholedata = loaddata()
             if not drillholedata.empty:
-                st.write("### Filter Data")
+                st.write("### Filter Data (Prior to Analysis)")
+                st.write("This is not a substitute for data cleaning. Please ensure your data is clean and formatted correctly.")
                 selectedvariables = selectvariables(drillholedata)
                 if len(selectedvariables) != 0:
                     user_filtered_data = filterdata(selectedvariables, drillholedata)
@@ -344,7 +360,7 @@ def main():
         if len(selectedvariables) == 0:
             st.warning("Please select at least one variable to filter on.")
         else:
-            tab1, tab2, tab3 = st.tabs(["General Analysis", "Seample Selection Assistant", "Help"])
+            tab1, tab2, tab3 = st.tabs(["General Analysis", "Seample Selection Assistant", "Help Me!"])
             with tab1:
                 col1, col2 = st.columns([1, 1])
                 if not user_filtered_data.empty:
@@ -381,7 +397,6 @@ def main():
                     with sampleselectioncontainer:
                         sampleselectionassistant(user_filtered_data)
             with tab3:
-                st.header("Help Section")
                 st.write("""
                 ## How to Use This Application
 
@@ -420,7 +435,7 @@ def main():
                 """)
     except Exception as e:
         with st.expander("**Error Log**", expanded=False):
-            st.error(f"An error occurred: {e}")
+            st.error(f"An error occurred: {e}. This must be a terrible application...")
 
 # Having script execute as per convention
 if __name__ == "__main__":
