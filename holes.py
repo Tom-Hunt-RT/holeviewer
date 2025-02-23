@@ -398,7 +398,7 @@ def main():
                     sampleselectionassistant(user_filtered_data)
     except Exception as e:
         with st.expander("Error Log", expanded=False):
-            st.error(f"Don't panic - errors are expected and don't mean that something is going wrong. However:  \n  \n**An error occurred:** {e}.  \n  \nThis must be a terrible application...")
+            st.error(f"Don't panic - errors are expected and don't mean that something is going wrong in a way that effects your work. However:  \n  \n**An error occurred:** {e}.  \n  \nThis must be a terrible application...")
     with st.expander("Help"):
         st.write("""
         ## How to Use This Application
