@@ -262,17 +262,12 @@ def sampleselectionassistant(data):
             current_mass = 0
 
             for _, row in representative_intervals.iterrows():
-                # If adding this interval causes the current mass to exceed required_mass
                 if current_mass + row['Mass'] >= required_mass:
-                    # Check if we can form valid smaller composites
                     while current_mass + row['Mass'] >= required_mass:
-                        # Split the composite such that the smaller composite meets the required mass
                         remaining_mass = required_mass - current_mass
                         if remaining_mass > 0:
-                            # Add the current composite up to the required mass
                             current_composite.append(row)
                             current_mass += row['Mass']
-                            # Create a smaller composite from this batch of intervals
                             avg_parameter_value = pd.Series([r[parameter_col] for r in current_composite]).mean()
                             composite_intervals.append({
                                 'HoleID': current_composite[0][holeid_col],
@@ -281,19 +276,15 @@ def sampleselectionassistant(data):
                                 'Total_Mass': current_mass,
                                 'Average_Parameter': avg_parameter_value
                             })
-                            # Reset the composite for the next round
                             current_composite = []
                             current_mass = 0
                         else:
-                            # Continue adding to the composite if we still can't reach required_mass
                             current_composite.append(row)
                             current_mass += row['Mass']
                 else:
-                    # Add the row to the current composite if it doesn't exceed required_mass
                     current_composite.append(row)
                     current_mass += row['Mass']
 
-            # After the loop, ensure any remaining composite is added (if it meets the required mass)
             if current_composite and current_mass >= required_mass:
                 avg_parameter_value = pd.Series([r[parameter_col] for r in current_composite]).mean()
                 composite_intervals.append({
@@ -398,7 +389,7 @@ def main():
                     sampleselectionassistant(user_filtered_data)
     except Exception as e:
         with st.expander("Error Log", expanded=False):
-            st.error(f"Don't panic - errors are expected and don't mean that something is going wrong in a way that effects your work. However:  \n  \n**An error occurred:** {e}.  \n  \nThis must be a terrible application...")
+            st.error(f"Don't panic - errors are expected and don't mean that something is going wrong. However:  \n  \n**An error occurred:** {e}.  \n  \nThis must be a terrible application...")
     with st.expander("Help"):
         st.write("""
         ## How to Use This Application
