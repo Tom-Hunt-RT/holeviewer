@@ -89,13 +89,7 @@ def filterdata(filters, data):
     return data
 
 # Downhole plots
-def createdownholeplots(data):
-    holeid_col = st.selectbox("Select 'Drillhole ID' column", options=data.columns, index=st.session_state.get('holeid_col_index', 0))
-    st.session_state['holeid_col_index'] = data.columns.get_loc(holeid_col)
-    from_col = st.selectbox("Select 'From' column", options=data.columns, index=st.session_state.get('from_col_index', 0))
-    st.session_state['from_col_index'] = data.columns.get_loc(from_col)
-    to_col = st.selectbox("Select 'To' column", options=data.columns, index=st.session_state.get('to_col_index', 0))
-    st.session_state['to_col_index'] = data.columns.get_loc(to_col)
+def createdownholeplots(data, holeid_col, from_col, to_col):
     selected_analytes = st.multiselect("Select variable to plot", options=data.columns, default=st.session_state.get('selected_analytes', []))
     st.session_state['selected_analytes'] = selected_analytes
     selected_color = st.selectbox("Select Colour", options=data.columns, index=st.session_state.get('selected_color_index', 0))
@@ -119,39 +113,38 @@ def createdownholeplots(data):
     st.plotly_chart(downholeplot, key="downholeplot")
 
 # Calculcate unique combos of values
-def variabilityanalysis(data):
-    holeid_col = st.selectbox("Select 'Drillhole ID' column for variability analysis", options=data.columns, index=st.session_state.get('variability_holeid_col_index', 0))
-    st.session_state['variability_holeid_col_index'] = data.columns.get_loc(holeid_col)
-    from_col = st.selectbox("Select 'From' column for variability analysis", options=data.columns, index=st.session_state.get('variability_from_col_index', 0))
-    st.session_state['variability_from_col_index'] = data.columns.get_loc(from_col)
-    to_col = st.selectbox("Select 'To' column for variability analysis", options=data.columns, index=st.session_state.get('variability_to_col_index', 0))
-    st.session_state['variability_to_col_index'] = data.columns.get_loc(to_col)
+def variabilityanalysis(data, holeid_col, from_col, to_col):
     groupby_columns = st.multiselect("Select columns to group by", options=data.columns, default=st.session_state.get('variability_groupby_columns', []))
     st.session_state['variability_groupby_columns'] = groupby_columns
     value_column = st.selectbox("Select value column to average", options=data.columns, index=st.session_state.get('variability_value_col_index', 0))
     st.session_state['variability_value_col_index'] = data.columns.get_loc(value_column)
-    if groupby_columns:
-        data['unique_id'] = data[holeid_col].astype(str) + '_' + data[from_col].astype(str) + '_' + data[to_col].astype(str)
-        combinations = data.groupby(groupby_columns)['unique_id'].nunique().reset_index()
-        combinations = combinations.rename(columns={'unique_id': 'Count'})
-        combinations['Combination'] = combinations[groupby_columns].apply(lambda row: '_'.join(row.values.astype(str)), axis=1)
-        combinations["Counts_Percentage"] = (combinations["Count"] / combinations["Count"].sum()) * 100
-        combinations["Mean Value"] = data.groupby(groupby_columns)[value_column].mean().values
-        combinations["Median Value"] = data.groupby(groupby_columns)[value_column].median().values
-        combinations["Min Value"] = data.groupby(groupby_columns)[value_column].min().values
-        combinations["Max Value"] = data.groupby(groupby_columns)[value_column].max().values
-        combinations["Range"] = combinations["Max Value"] - combinations["Min Value"]
-        fig = px.bar(combinations, x='Combination', y='Mean Value', title=f'Mean {value_column} value with respect to {groupby_columns}', color='Counts_Percentage', color_continuous_scale='Viridis')
-        fig2 = px.bar(combinations, x='Combination', y='Median Value', title=f'Median {value_column} value with respect to {groupby_columns}', color='Counts_Percentage', color_continuous_scale='Viridis')
-        st.plotly_chart(fig, key="variabilityplot")
-        st.plotly_chart(fig2, key="variabilityplot2")
-        st.write(combinations)
-        return combinations
-    else:
+
+    # Ensure that valid selections are made
+    if not groupby_columns or not value_column:
         return pd.DataFrame(columns=['Combination', 'Count', 'Counts_Percentage', 'Mean Value', 'Median Value', 'Min Value', 'Max Value', 'Range'])
 
+    # Perform the analysis if valid selections are made
+    data['unique_id'] = data[holeid_col].astype(str) + '_' + data[from_col].astype(str) + '_' + data[to_col].astype(str)
+    combinations = data.groupby(groupby_columns)['unique_id'].nunique().reset_index()
+    combinations = combinations.rename(columns={'unique_id': 'Count'})
+    combinations['Combination'] = combinations[groupby_columns].apply(lambda row: '_'.join(row.values.astype(str)), axis=1)
+    combinations["Counts_Percentage"] = (combinations["Count"] / combinations["Count"].sum()) * 100
+    combinations["Mean Value"] = data.groupby(groupby_columns)[value_column].mean().values
+    combinations["Median Value"] = data.groupby(groupby_columns)[value_column].median().values
+    combinations["Min Value"] = data.groupby(groupby_columns)[value_column].min().values
+    combinations["Max Value"] = data.groupby(groupby_columns)[value_column].max().values
+    combinations["Range"] = combinations["Max Value"] - combinations["Min Value"]
+
+    fig = px.bar(combinations, x='Combination', y='Mean Value', title=f'Mean {value_column} value with respect to {groupby_columns}', color='Counts_Percentage', color_continuous_scale='Viridis')
+    fig2 = px.bar(combinations, x='Combination', y='Median Value', title=f'Median {value_column} value with respect to {groupby_columns}', color='Counts_Percentage', color_continuous_scale='Viridis')
+    st.plotly_chart(fig, key="variabilityplot")
+    st.plotly_chart(fig2, key="variabilityplot2")
+    st.write(combinations)
+    
+    return combinations
+
 # Create a sample selection assistant
-def sampleselectionassistant(data):
+def sampleselectionassistant(data, holeid_col, from_col, to_col):
     screening_method = st.selectbox("Select screening method", options=["Pre-screening (by interval)", "Post-screening (by composite)"])
     categorical_cols = st.multiselect("Select categorical variables for filtering (i.e., your subset for analysis)", options=data.columns)
     
@@ -174,10 +167,6 @@ def sampleselectionassistant(data):
         mass_per_unit = st.number_input("Enter mass per unit of length (units = To - From)", min_value=0.0)
     else:
         mass_per_unit = None
-    
-    holeid_col = st.selectbox("Select 'HoleID' column", options=data.columns)
-    from_col = st.selectbox("Select 'From' column", options=data.columns)
-    to_col = st.selectbox("Select 'To' column", options=data.columns)
     
     select_all_holeid = st.checkbox("Select all Drillholes", value=True)
     if select_all_holeid:
@@ -323,79 +312,100 @@ def sampleselectionassistant(data):
 
 # Create a scatter plot based on variables of interest to user
 def scatteranalysis(data):
-    x_variable = st.selectbox("X-axis variable", options=data.columns, index=0, key="scatterx")
-    y_variable = st.selectbox("Y-axis variable", options=data.columns, index=0, key="scattery")
-    colour_selection = st.selectbox("Colour selection", options=data.columns, index=0)
-    if st.checkbox("Select for ordinary least squares trendline"):
-        trend_value = "ols"
-    else:
-        trend_value = None
+    x_variable = st.selectbox("X-axis variable", options=data.columns, index=st.session_state.get('scatter_x_index', 0), key="scatterx")
+    st.session_state['scatter_x_index'] = data.columns.get_loc(x_variable)
+    y_variable = st.selectbox("Y-axis variable", options=data.columns, index=st.session_state.get('scatter_y_index', 0), key="scattery")
+    st.session_state['scatter_y_index'] = data.columns.get_loc(y_variable)
+    colour_selection = st.selectbox("Colour selection", options=data.columns, index=st.session_state.get('scatter_color_index', 0))
+    st.session_state['scatter_color_index'] = data.columns.get_loc(colour_selection)
+    trend_value = "ols" if st.checkbox("Select for ordinary least squares trendline") else None
     scatterplot = px.scatter(data, x=x_variable, y=y_variable, trendline=trend_value, color=colour_selection, title=f"Scatter plot of {x_variable} vs {y_variable}")
-    
     st.plotly_chart(scatterplot, key="scatterplot")
 
 # Create a box plot based on variables of interest to user
 def boxplot(data):
-    x_variable = st.selectbox("X-axis variable", options=data.columns, index=0, key="boxx")
-    y_variable = st.selectbox("Y-axis variable", options=data.columns, index=0, key="boxy")
-    colour_selection = st.selectbox("Colour selection", options=data.columns, index=0, key="colourselectbox")
+    x_variable = st.selectbox("X-axis variable", options=data.columns, index=st.session_state.get('box_x_index', 0), key="boxx")
+    st.session_state['box_x_index'] = data.columns.get_loc(x_variable)
+    y_variable = st.selectbox("Y-axis variable", options=data.columns, index=st.session_state.get('box_y_index', 0), key="boxy")
+    st.session_state['box_y_index'] = data.columns.get_loc(y_variable)
+    colour_selection = st.selectbox("Colour selection", options=data.columns, index=st.session_state.get('box_color_index', 0), key="colourselectbox")
+    st.session_state['box_color_index'] = data.columns.get_loc(colour_selection)
     userboxplot = px.box(data, x=x_variable, y=y_variable, title=f"Box plot of {x_variable} vs {y_variable}", color=colour_selection)
     st.plotly_chart(userboxplot, key="userboxplot")
 
 # Defining the main execution function
 def main():
-    try:
-        with st.sidebar:
-            st.title("Drillhole Database Analytics")
-            st.cache_data()
-            drillholedata = loaddata()
-            if not drillholedata.empty:
-                st.write("### Filter Data (Prior to Analysis)")
-                st.write("This is not a substitute for data cleaning. Please ensure your data is clean and formatted correctly.")
-                selectedvariables = selectvariables(drillholedata)
-                if selectedvariables:
-                    st.cache_data()
-                    user_filtered_data = filterdata(selectedvariables, drillholedata)
-                else:
-                    user_filtered_data = pd.DataFrame()
-                    st.text("Data will appear once selected")
+    with st.sidebar:
+        st.title("Drillhole Database Analytics")
+        st.cache_data()
+        drillholedata = loaddata()
+        if not drillholedata.empty:
+            holeid_col = st.selectbox("Select your data's 'Drillhole ID' column", options=drillholedata.columns, index=st.session_state.get('holeid_col_index', 0))
+            st.session_state['holeid_col_index'] = drillholedata.columns.get_loc(holeid_col)
+            from_col = st.selectbox("Select you data's 'From' column", options=drillholedata.columns, index=st.session_state.get('from_col_index', 0))
+            st.session_state['from_col_index'] = drillholedata.columns.get_loc(from_col)
+            to_col = st.selectbox("Select your data's 'To' column", options=drillholedata.columns, index=st.session_state.get('to_col_index', 0))
+            st.session_state['to_col_index'] = drillholedata.columns.get_loc(to_col)
+            st.write("### Filter Data (Prior to Analysis)")
+            st.write("This is not a substitute for data cleaning. Please ensure your data is clean and formatted correctly.")
+
+            selectedvariables = selectvariables(drillholedata)
+            if selectedvariables:
+                st.cache_data()
+                user_filtered_data = filterdata(selectedvariables, drillholedata)
             else:
                 user_filtered_data = pd.DataFrame()
-        
-        if not selectedvariables:
-            st.warning("Please select at least one variable to filter on. If you want everything, select 'HoleID' (or equivalent), then 'Select All'.")
+                st.text("Data will appear once selected")
         else:
-            tab1, tab2, tab3, tab4, tab5 = st.tabs(["Downhole Plot", "Interval Variability Analysis", "Scatter Plot", "Box Plot", "Sample Selection Assistant"])
-            
-            with st.expander("Show Filtered Data"):
-                st.header("Filtered Data Display")
-                st.write(user_filtered_data)
-            
-            if not user_filtered_data.empty:
-                with tab1:
-                    st.header("Downhole Line Plot")
-                    createdownholeplots(user_filtered_data)
-                
-                with tab2:
+            user_filtered_data = pd.DataFrame()
+    
+    if not selectedvariables:
+        st.warning("Please select at least one variable to filter on. If you want everything, select 'HoleID' (or equivalent), then 'Select All'.")
+    else:
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["Downhole Plot", "Interval Variability Analysis", "Scatter Plot", "Box Plot", "Sample Selection Assistant"])
+        
+        with st.expander("Show Filtered Data"):
+            st.header("Filtered Data Display")
+            st.write(user_filtered_data)
+        
+        if not user_filtered_data.empty:
+            with tab1:
+                st.header("Downhole Line Plot")
+                try:
+                    createdownholeplots(user_filtered_data, holeid_col, from_col, to_col)
+                except Exception as e:
+                    with st.expander("Error Log", expanded=False):
+                        st.error(f"An error occurred: {e}")
+            with tab2:
+                try:
                     st.header("Interval Variability Analysis")
-                    variabilityanalyses = variabilityanalysis(user_filtered_data)
-                    st.write(f"Number of Intervals Remaining: {variabilityanalyses['Count'].sum()}")
-                
-                with tab3:
+                    variabilityanalyses = variabilityanalysis(user_filtered_data, holeid_col, from_col, to_col)
+                    if variabilityanalyses:
+                        st.write(f"Number of Intervals Remaining: {variabilityanalyses['Count'].sum()}")
+                except Exception as e:
+                    with st.expander("Error Log", expanded=False):
+                        st.error(f"An error occurred: {e}")
+            with tab3:
+                try:
                     st.header("Scatter Analysis")
                     scatteranalysis(user_filtered_data.reset_index(drop=True))
-                
-                with tab4:
+                except Exception as e:
+                    with st.expander("Error Log", expanded=False):
+                        st.error(f"An error occurred: {e}")
+            with tab4:
+                try:
                     st.header("Box Plot")
                     boxplot(user_filtered_data)
-                
-                with tab5:
+                except Exception as e:
+                    with st.expander("Error Log", expanded=False):
+                        st.error(f"An error occurred: {e}")
+            with tab5:
+                try:
                     st.header("Sample Selection Assistant")
-                    sampleselectionassistant(user_filtered_data)
-    
-    except Exception as e:
-        with st.expander("Error Log", expanded=False):
-            st.error(f"An error occurred: {e}")
+                    sampleselectionassistant(user_filtered_data, holeid_col, from_col, to_col)
+                except Exception as e:
+                    with st.expander("Error Log", expanded=False):
+                        st.error(f"An error occurred: {e}")
 
     with st.expander("Help"):
         st.write("""
