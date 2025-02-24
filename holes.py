@@ -96,7 +96,7 @@ def createdownholeplots(data):
     # st.session_state['from_col_index'] = data.columns.get_loc(from_col)
     to_col = st.selectbox("Select 'To' column", options=data.columns)
     # st.session_state['to_col_index'] = data.columns.get_loc(to_col)
-    selected_analytes = st.multiselect("Select variable to plot", options=data.columns))
+    selected_analytes = st.multiselect("Select variable to plot", options=data.columns)
     # st.session_state['selected_analytes'] = selected_analytes
     selected_color = st.selectbox("Select Colour", options=data.columns)
     # st.session_state['selected_color_index'] = data.columns.get_loc(selected_color)
