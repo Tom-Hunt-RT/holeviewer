@@ -90,19 +90,18 @@ def filterdata(filters, data):
 
 # Downhole plots
 def createdownholeplots(data):
-    with st.expander("Downhole Plot Options", expanded=False):
-        holeid_col = st.selectbox("Select 'Drillhole ID' column", options=data.columns, index=st.session_state.get('holeid_col_index', 0))
-        st.session_state['holeid_col_index'] = data.columns.get_loc(holeid_col)
-        from_col = st.selectbox("Select 'From' column", options=data.columns, index=st.session_state.get('from_col_index', 0))
-        st.session_state['from_col_index'] = data.columns.get_loc(from_col)
-        to_col = st.selectbox("Select 'To' column", options=data.columns, index=st.session_state.get('to_col_index', 0))
-        st.session_state['to_col_index'] = data.columns.get_loc(to_col)
-        selected_analytes = st.multiselect("Select variable to plot", options=data.columns, default=st.session_state.get('selected_analytes', []))
-        st.session_state['selected_analytes'] = selected_analytes
-        selected_color = st.selectbox("Select Colour", options=data.columns, index=st.session_state.get('selected_color_index', 0))
-        st.session_state['selected_color_index'] = data.columns.get_loc(selected_color)
-        hover_data_options = st.multiselect("Select hover data", options=data.columns, default=st.session_state.get('hover_data_options', []))
-        st.session_state['hover_data_options'] = hover_data_options
+    holeid_col = st.selectbox("Select 'Drillhole ID' column", options=data.columns, index=st.session_state.get('holeid_col_index', 0))
+    st.session_state['holeid_col_index'] = data.columns.get_loc(holeid_col)
+    from_col = st.selectbox("Select 'From' column", options=data.columns, index=st.session_state.get('from_col_index', 0))
+    st.session_state['from_col_index'] = data.columns.get_loc(from_col)
+    to_col = st.selectbox("Select 'To' column", options=data.columns, index=st.session_state.get('to_col_index', 0))
+    st.session_state['to_col_index'] = data.columns.get_loc(to_col)
+    selected_analytes = st.multiselect("Select variable to plot", options=data.columns, default=st.session_state.get('selected_analytes', []))
+    st.session_state['selected_analytes'] = selected_analytes
+    selected_color = st.selectbox("Select Colour", options=data.columns, index=st.session_state.get('selected_color_index', 0))
+    st.session_state['selected_color_index'] = data.columns.get_loc(selected_color)
+    hover_data_options = st.multiselect("Select hover data", options=data.columns, default=st.session_state.get('hover_data_options', []))
+    st.session_state['hover_data_options'] = hover_data_options
 
     data[from_col] = pd.to_numeric(data[from_col], errors='coerce')
     data[to_col] = pd.to_numeric(data[to_col], errors='coerce')
@@ -197,6 +196,7 @@ def sampleselectionassistant(data):
         lower_bound = target_value - (target_value * (percentage_range / 100))
         upper_bound = target_value + (target_value * (percentage_range / 100))
 
+        # Apply the target range filter
         representative_intervals = filtered_data[(filtered_data[parameter_col] >= lower_bound) & (filtered_data[parameter_col] <= upper_bound)]
         st.write(f"Number of intervals within {percentage_range}% of the target value: {representative_intervals.shape[0]}")
         representative_intervals = representative_intervals.sort_values(by=[holeid_col, from_col]).reset_index(drop=True)
@@ -245,8 +245,14 @@ def sampleselectionassistant(data):
             st.write("### Valid Composites meeting the required mass:")
             st.write(valid_composites)
         else:
-            st.write("### Representative Intervals based on parameter and selection method:")
-            st.write(representative_intervals)
+            st.write("### Representative Intervals based on selection method:")
+            lower_bound = target_value - (target_value * (percentage_range / 100))
+            upper_bound = target_value + (target_value * (percentage_range / 100))
+
+            valid_intervals = representative_intervals[(representative_intervals[parameter_col] >= lower_bound) & 
+                                            (representative_intervals[parameter_col] <= upper_bound)]
+            st.write(valid_intervals)
+
 
     elif screening_method == "Post-screening (by composite)":
         representative_intervals = filtered_data.sort_values(by=[holeid_col, from_col]).reset_index(drop=True)
@@ -308,7 +314,12 @@ def sampleselectionassistant(data):
             st.write(valid_composites)
         else:
             st.write("### Representative Intervals based on selection method:")
-            st.write(representative_intervals)
+            lower_bound = target_value - (target_value * (percentage_range / 100))
+            upper_bound = target_value + (target_value * (percentage_range / 100))
+
+            valid_intervals = representative_intervals[(representative_intervals[parameter_col] >= lower_bound) & 
+                                            (representative_intervals[parameter_col] <= upper_bound)]
+            st.write(valid_intervals)
 
 # Create a scatter plot based on variables of interest to user
 def scatteranalysis(data):
@@ -342,7 +353,8 @@ def main():
                 st.write("### Filter Data (Prior to Analysis)")
                 st.write("This is not a substitute for data cleaning. Please ensure your data is clean and formatted correctly.")
                 selectedvariables = selectvariables(drillholedata)
-                if len(selectedvariables) != 0:
+                if selectedvariables:
+                    st.cache_data()
                     user_filtered_data = filterdata(selectedvariables, drillholedata)
                 else:
                     user_filtered_data = pd.DataFrame()
@@ -350,46 +362,41 @@ def main():
             else:
                 user_filtered_data = pd.DataFrame()
         
-        if len(selectedvariables) == 0:
+        if not selectedvariables:
             st.warning("Please select at least one variable to filter on. If you want everything, select 'HoleID' (or equivalent), then 'Select All'.")
         else:
             tab1, tab2, tab3, tab4, tab5 = st.tabs(["Downhole Plot", "Interval Variability Analysis", "Scatter Plot", "Box Plot", "Sample Selection Assistant"])
+            
             with st.expander("Show Filtered Data"):
-                tablecontainer = st.container(border=True)
-                with tablecontainer:
-                    st.header("Filtered Data Display")
-                    st.write(user_filtered_data)
-            with tab1:
-                if not user_filtered_data.empty:
-                    downholecontainer = st.container(border=True)
-                    with downholecontainer:
-                        st.header("Downhole Line Plot")
-                        createdownholeplots(user_filtered_data)
-            with tab2:
-                if not user_filtered_data.empty:
-                    variabilitycontainer = st.container(border=True)
-                    with variabilitycontainer:
-                        variabilityanalyses = variabilityanalysis(user_filtered_data)
-                        st.write(f"Number of Intervals Remaining: {variabilityanalyses['Count'].sum()}")
-            with tab3:
-                if not user_filtered_data.empty:
-                    scattercontainer = st.container(border=True)
-                    with scattercontainer:
-                        st.header("Scatter Analysis")
-                        scatteranalysis(user_filtered_data.reset_index(drop=True))
-            with tab4:
-                if not user_filtered_data.empty:
-                    boxplotcontainer = st.container(border=True)
-                    with boxplotcontainer:
-                        st.header("Box Plot")
-                        boxplot(user_filtered_data)
-            with tab5:
-                sampleselectioncontainer = st.container(border=True)
-                with sampleselectioncontainer:
+                st.header("Filtered Data Display")
+                st.write(user_filtered_data)
+            
+            if not user_filtered_data.empty:
+                with tab1:
+                    st.header("Downhole Line Plot")
+                    createdownholeplots(user_filtered_data)
+                
+                with tab2:
+                    st.header("Interval Variability Analysis")
+                    variabilityanalyses = variabilityanalysis(user_filtered_data)
+                    st.write(f"Number of Intervals Remaining: {variabilityanalyses['Count'].sum()}")
+                
+                with tab3:
+                    st.header("Scatter Analysis")
+                    scatteranalysis(user_filtered_data.reset_index(drop=True))
+                
+                with tab4:
+                    st.header("Box Plot")
+                    boxplot(user_filtered_data)
+                
+                with tab5:
+                    st.header("Sample Selection Assistant")
                     sampleselectionassistant(user_filtered_data)
+    
     except Exception as e:
         with st.expander("Error Log", expanded=False):
-            st.error(f"Don't panic - errors are expected and don't mean that something is going wrong. However:  \n  \n**An error occurred:** {e}.  \n  \nThis must be a terrible application...")
+            st.error(f"An error occurred: {e}")
+
     with st.expander("Help"):
         st.write("""
         ## How to Use This Application
@@ -400,7 +407,7 @@ def main():
         2. **Filter Data**: Select the variables you want to filter on and apply the desired filters. This will be used in all subsequent analyses.
         3. **Select Analysis**: Choose the type of analysis you want to perform:
             - **Downhole Line Plot**: Visualize the data along/down the drillhole.
-            - **Interval Variability Analysis**: Analyze the variability of intervals with respect to different paramenters (e.g., lithology and alteration types).
+            - **Interval Variability Analysis**: Analyze the variability of intervals with respect to different parameters (e.g., lithology and alteration types).
             - **Scatter Analysis**: Create scatter plots to visualize relationships between variables.
             - **Box Plot**: Create box plots to visualize the distribution of variables.
         4. **Sample Selection Assistant**: Use this tool to assist in selecting samples based on various criteria (e.g., mass requirements and cut off grade).
@@ -421,7 +428,7 @@ def main():
 
         ## Potential Issues and How to Avoid Them
 
-        - **File Upload Issues**: Ensure the file is in CSV format and encoded in UTF-8, Latin-1, or ISO-8859-1 (probably will be one of the 3...).
+        - **File Upload Issues**: Ensure the file is in CSV format and encoded in UTF-8, Latin-1, or ISO-8859-1.
         - **Data Quality**: Ensure the data is clean and properly formatted. Missing or non-numeric values in critical columns can cause errors.
         - **Filter Selection**: Be cautious when applying multiple filters, as overly restrictive filters may result in no data being displayed.
 
