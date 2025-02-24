@@ -90,18 +90,18 @@ def filterdata(filters, data):
 
 # Downhole plots
 def createdownholeplots(data):
-    holeid_col = st.selectbox("Select 'Drillhole ID' column", options=data.columns)
-    # st.session_state['holeid_col_index'] = data.columns.get_loc(holeid_col)
-    from_col = st.selectbox("Select 'From' column", options=data.columns)
-    # st.session_state['from_col_index'] = data.columns.get_loc(from_col)
-    to_col = st.selectbox("Select 'To' column", options=data.columns)
-    # st.session_state['to_col_index'] = data.columns.get_loc(to_col)
-    selected_analytes = st.multiselect("Select variable to plot", options=data.columns)
-    # st.session_state['selected_analytes'] = selected_analytes
-    selected_color = st.selectbox("Select Colour", options=data.columns)
-    # st.session_state['selected_color_index'] = data.columns.get_loc(selected_color)
-    hover_data_options = st.multiselect("Select hover data", options=data.columns))
-    # st.session_state['hover_data_options'] = hover_data_options
+    holeid_col = st.selectbox("Select 'Drillhole ID' column", options=data.columns, index=st.session_state.get('holeid_col_index', 0))
+    st.session_state['holeid_col_index'] = data.columns.get_loc(holeid_col)
+    from_col = st.selectbox("Select 'From' column", options=data.columns, index=st.session_state.get('from_col_index', 0))
+    st.session_state['from_col_index'] = data.columns.get_loc(from_col)
+    to_col = st.selectbox("Select 'To' column", options=data.columns, index=st.session_state.get('to_col_index', 0))
+    st.session_state['to_col_index'] = data.columns.get_loc(to_col)
+    selected_analytes = st.multiselect("Select variable to plot", options=data.columns, default=st.session_state.get('selected_analytes', []))
+    st.session_state['selected_analytes'] = selected_analytes
+    selected_color = st.selectbox("Select Colour", options=data.columns, index=st.session_state.get('selected_color_index', 0))
+    st.session_state['selected_color_index'] = data.columns.get_loc(selected_color)
+    hover_data_options = st.multiselect("Select hover data", options=data.columns, default=st.session_state.get('hover_data_options', []))
+    st.session_state['hover_data_options'] = hover_data_options
 
     data[from_col] = pd.to_numeric(data[from_col], errors='coerce')
     data[to_col] = pd.to_numeric(data[to_col], errors='coerce')
@@ -120,16 +120,16 @@ def createdownholeplots(data):
 
 # Calculcate unique combos of values
 def variabilityanalysis(data):
-    holeid_col = st.selectbox("Select 'Drillhole ID' column for variability analysis", options=data.columns, index=st.session_state.get('variability_holeid_col_index', 0))
-    st.session_state['variability_holeid_col_index'] = data.columns.get_loc(holeid_col)
-    from_col = st.selectbox("Select 'From' column for variability analysis", options=data.columns, index=st.session_state.get('variability_from_col_index', 0))
-    st.session_state['variability_from_col_index'] = data.columns.get_loc(from_col)
-    to_col = st.selectbox("Select 'To' column for variability analysis", options=data.columns, index=st.session_state.get('variability_to_col_index', 0))
-    st.session_state['variability_to_col_index'] = data.columns.get_loc(to_col)
-    groupby_columns = st.multiselect("Select columns to group by", options=data.columns, default=st.session_state.get('variability_groupby_columns', []))
-    st.session_state['variability_groupby_columns'] = groupby_columns
-    value_column = st.selectbox("Select value column to average", options=data.columns, index=st.session_state.get('variability_value_col_index', 0))
-    st.session_state['variability_value_col_index'] = data.columns.get_loc(value_column)
+    holeid_col = st.selectbox("Select 'Drillhole ID' column for variability analysis", options=data.columns)
+    # st.session_state['variability_holeid_col_index'] = data.columns.get_loc(holeid_col)
+    from_col = st.selectbox("Select 'From' column for variability analysis", options=data.columns)
+    # st.session_state['variability_from_col_index'] = data.columns.get_loc(from_col)
+    to_col = st.selectbox("Select 'To' column for variability analysis", options=data.columns)
+    # st.session_state['variability_to_col_index'] = data.columns.get_loc(to_col)
+    groupby_columns = st.multiselect("Select columns to group by", options=data.columns)
+    # st.session_state['variability_groupby_columns'] = groupby_columns
+    value_column = st.selectbox("Select value column to average", options=data.columns)
+    # st.session_state['variability_value_col_index'] = data.columns.get_loc(value_column)
 
     # Ensure that valid selections are made
     if not groupby_columns or not value_column:
