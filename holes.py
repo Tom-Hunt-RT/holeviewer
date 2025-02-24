@@ -444,3 +444,6 @@ def main():
 # Having script execute as per convention
 if __name__ == "__main__":
     main()
+# Having script execute as per convention
+if __name__ == "__main__":
+    main()
