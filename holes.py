@@ -120,41 +120,35 @@ def createdownholeplots(data):
 
 # Calculcate unique combos of values
 def variabilityanalysis(data):
-    holeid_col = st.selectbox("Select 'Drillhole ID' column for variability analysis", options=data.columns)
-    # st.session_state['variability_holeid_col_index'] = data.columns.get_loc(holeid_col)
-    from_col = st.selectbox("Select 'From' column for variability analysis", options=data.columns)
-    # st.session_state['variability_from_col_index'] = data.columns.get_loc(from_col)
-    to_col = st.selectbox("Select 'To' column for variability analysis", options=data.columns)
-    # st.session_state['variability_to_col_index'] = data.columns.get_loc(to_col)
-    groupby_columns = st.multiselect("Select columns to group by", options=data.columns)
-    # st.session_state['variability_groupby_columns'] = groupby_columns
-    value_column = st.selectbox("Select value column to average", options=data.columns)
-    # st.session_state['variability_value_col_index'] = data.columns.get_loc(value_column)
-
-    # Ensure that valid selections are made
-    if not groupby_columns or not value_column:
-        st.warning("Please select at least one grouping column and a value column to analyze.")
+    holeid_col = st.selectbox("Select 'Drillhole ID' column for variability analysis", options=data.columns, index=st.session_state.get('variability_holeid_col_index', 0))
+    st.session_state['variability_holeid_col_index'] = data.columns.get_loc(holeid_col)
+    from_col = st.selectbox("Select 'From' column for variability analysis", options=data.columns, index=st.session_state.get('variability_from_col_index', 0))
+    st.session_state['variability_from_col_index'] = data.columns.get_loc(from_col)
+    to_col = st.selectbox("Select 'To' column for variability analysis", options=data.columns, index=st.session_state.get('variability_to_col_index', 0))
+    st.session_state['variability_to_col_index'] = data.columns.get_loc(to_col)
+    groupby_columns = st.multiselect("Select columns to group by", options=data.columns, default=st.session_state.get('variability_groupby_columns', []))
+    st.session_state['variability_groupby_columns'] = groupby_columns
+    value_column = st.selectbox("Select value column to average", options=data.columns, index=st.session_state.get('variability_value_col_index', 0))
+    st.session_state['variability_value_col_index'] = data.columns.get_loc(value_column)
+    if groupby_columns:
+        data['unique_id'] = data[holeid_col].astype(str) + '_' + data[from_col].astype(str) + '_' + data[to_col].astype(str)
+        combinations = data.groupby(groupby_columns)['unique_id'].nunique().reset_index()
+        combinations = combinations.rename(columns={'unique_id': 'Count'})
+        combinations['Combination'] = combinations[groupby_columns].apply(lambda row: '_'.join(row.values.astype(str)), axis=1)
+        combinations["Counts_Percentage"] = (combinations["Count"] / combinations["Count"].sum()) * 100
+        combinations["Mean Value"] = data.groupby(groupby_columns)[value_column].mean().values
+        combinations["Median Value"] = data.groupby(groupby_columns)[value_column].median().values
+        combinations["Min Value"] = data.groupby(groupby_columns)[value_column].min().values
+        combinations["Max Value"] = data.groupby(groupby_columns)[value_column].max().values
+        combinations["Range"] = combinations["Max Value"] - combinations["Min Value"]
+        fig = px.bar(combinations, x='Combination', y='Mean Value', title=f'Mean {value_column} value with respect to {groupby_columns}', color='Counts_Percentage', color_continuous_scale='Viridis')
+        fig2 = px.bar(combinations, x='Combination', y='Median Value', title=f'Median {value_column} value with respect to {groupby_columns}', color='Counts_Percentage', color_continuous_scale='Viridis')
+        st.plotly_chart(fig, key="variabilityplot")
+        st.plotly_chart(fig2, key="variabilityplot2")
+        st.write(combinations)
+        return combinations
+    else:
         return pd.DataFrame(columns=['Combination', 'Count', 'Counts_Percentage', 'Mean Value', 'Median Value', 'Min Value', 'Max Value', 'Range'])
-
-    # Perform the analysis if valid selections are made
-    data['unique_id'] = data[holeid_col].astype(str) + '_' + data[from_col].astype(str) + '_' + data[to_col].astype(str)
-    combinations = data.groupby(groupby_columns)['unique_id'].nunique().reset_index()
-    combinations = combinations.rename(columns={'unique_id': 'Count'})
-    combinations['Combination'] = combinations[groupby_columns].apply(lambda row: '_'.join(row.values.astype(str)), axis=1)
-    combinations["Counts_Percentage"] = (combinations["Count"] / combinations["Count"].sum()) * 100
-    combinations["Mean Value"] = data.groupby(groupby_columns)[value_column].mean().values
-    combinations["Median Value"] = data.groupby(groupby_columns)[value_column].median().values
-    combinations["Min Value"] = data.groupby(groupby_columns)[value_column].min().values
-    combinations["Max Value"] = data.groupby(groupby_columns)[value_column].max().values
-    combinations["Range"] = combinations["Max Value"] - combinations["Min Value"]
-
-    fig = px.bar(combinations, x='Combination', y='Mean Value', title=f'Mean {value_column} value with respect to {groupby_columns}', color='Counts_Percentage', color_continuous_scale='Viridis')
-    fig2 = px.bar(combinations, x='Combination', y='Median Value', title=f'Median {value_column} value with respect to {groupby_columns}', color='Counts_Percentage', color_continuous_scale='Viridis')
-    st.plotly_chart(fig, key="variabilityplot")
-    st.plotly_chart(fig2, key="variabilityplot2")
-    st.write(combinations)
-    
-    return combinations
 
 # Create a sample selection assistant
 def sampleselectionassistant(data):
@@ -441,9 +435,6 @@ def main():
         If you encounter any issues, please refer to the error log for more details.
         """)
 
-# Having script execute as per convention
-if __name__ == "__main__":
-    main()
 # Having script execute as per convention
 if __name__ == "__main__":
     main()
