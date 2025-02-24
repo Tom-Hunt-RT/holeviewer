@@ -301,6 +301,7 @@ def sampleselectionassistant(data, holeid_col, from_col, to_col):
 
             st.write("### Valid Composites meeting the required mass and parameter criteria:")
             st.write(valid_composites)
+
         else:
             st.write("### Representative Intervals based on selection method:")
             lower_bound = target_value - (target_value * (percentage_range / 100))
@@ -350,6 +351,7 @@ def main():
             st.write("This is not a substitute for data cleaning. Please ensure your data is clean and formatted correctly.")
 
             selectedvariables = selectvariables(drillholedata)
+
             if selectedvariables:
                 st.cache_data()
                 user_filtered_data = filterdata(selectedvariables, drillholedata)
@@ -357,10 +359,11 @@ def main():
                 user_filtered_data = pd.DataFrame()
                 st.text("Data will appear once selected")
         else:
+            selectedvariables = []
             user_filtered_data = pd.DataFrame()
     
     if not selectedvariables:
-        st.warning("Please select at least one variable to filter on. If you want everything, select 'HoleID' (or equivalent), then 'Select All'.")
+        st.warning("Please upload a file and select at least one variable to filter on. If you want everything, select 'HoleID' (or equivalent), then 'Select All'.")
     else:
         tab1, tab2, tab3, tab4, tab5 = st.tabs(["Downhole Plot", "Interval Variability Analysis", "Scatter Plot", "Box Plot", "Sample Selection Assistant"])
         
