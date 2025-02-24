@@ -130,25 +130,31 @@ def variabilityanalysis(data):
     st.session_state['variability_groupby_columns'] = groupby_columns
     value_column = st.selectbox("Select value column to average", options=data.columns, index=st.session_state.get('variability_value_col_index', 0))
     st.session_state['variability_value_col_index'] = data.columns.get_loc(value_column)
-    if groupby_columns:
-        data['unique_id'] = data[holeid_col].astype(str) + '_' + data[from_col].astype(str) + '_' + data[to_col].astype(str)
-        combinations = data.groupby(groupby_columns)['unique_id'].nunique().reset_index()
-        combinations = combinations.rename(columns={'unique_id': 'Count'})
-        combinations['Combination'] = combinations[groupby_columns].apply(lambda row: '_'.join(row.values.astype(str)), axis=1)
-        combinations["Counts_Percentage"] = (combinations["Count"] / combinations["Count"].sum()) * 100
-        combinations["Mean Value"] = data.groupby(groupby_columns)[value_column].mean().values
-        combinations["Median Value"] = data.groupby(groupby_columns)[value_column].median().values
-        combinations["Min Value"] = data.groupby(groupby_columns)[value_column].min().values
-        combinations["Max Value"] = data.groupby(groupby_columns)[value_column].max().values
-        combinations["Range"] = combinations["Max Value"] - combinations["Min Value"]
-        fig = px.bar(combinations, x='Combination', y='Mean Value', title=f'Mean {value_column} value with respect to {groupby_columns}', color='Counts_Percentage', color_continuous_scale='Viridis')
-        fig2 = px.bar(combinations, x='Combination', y='Median Value', title=f'Median {value_column} value with respect to {groupby_columns}', color='Counts_Percentage', color_continuous_scale='Viridis')
-        st.plotly_chart(fig, key="variabilityplot")
-        st.plotly_chart(fig2, key="variabilityplot2")
-        st.write(combinations)
-        return combinations
-    else:
+
+    # Ensure that valid selections are made
+    if not groupby_columns or not value_column:
+        st.warning("Please select at least one grouping column and a value column to analyze.")
         return pd.DataFrame(columns=['Combination', 'Count', 'Counts_Percentage', 'Mean Value', 'Median Value', 'Min Value', 'Max Value', 'Range'])
+
+    # Perform the analysis if valid selections are made
+    data['unique_id'] = data[holeid_col].astype(str) + '_' + data[from_col].astype(str) + '_' + data[to_col].astype(str)
+    combinations = data.groupby(groupby_columns)['unique_id'].nunique().reset_index()
+    combinations = combinations.rename(columns={'unique_id': 'Count'})
+    combinations['Combination'] = combinations[groupby_columns].apply(lambda row: '_'.join(row.values.astype(str)), axis=1)
+    combinations["Counts_Percentage"] = (combinations["Count"] / combinations["Count"].sum()) * 100
+    combinations["Mean Value"] = data.groupby(groupby_columns)[value_column].mean().values
+    combinations["Median Value"] = data.groupby(groupby_columns)[value_column].median().values
+    combinations["Min Value"] = data.groupby(groupby_columns)[value_column].min().values
+    combinations["Max Value"] = data.groupby(groupby_columns)[value_column].max().values
+    combinations["Range"] = combinations["Max Value"] - combinations["Min Value"]
+
+    fig = px.bar(combinations, x='Combination', y='Mean Value', title=f'Mean {value_column} value with respect to {groupby_columns}', color='Counts_Percentage', color_continuous_scale='Viridis')
+    fig2 = px.bar(combinations, x='Combination', y='Median Value', title=f'Median {value_column} value with respect to {groupby_columns}', color='Counts_Percentage', color_continuous_scale='Viridis')
+    st.plotly_chart(fig, key="variabilityplot")
+    st.plotly_chart(fig2, key="variabilityplot2")
+    st.write(combinations)
+    
+    return combinations
 
 # Create a sample selection assistant
 def sampleselectionassistant(data):
