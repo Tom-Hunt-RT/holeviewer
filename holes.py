@@ -94,11 +94,10 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     selected_analytes = st.multiselect("Select variable to plot", options=data.columns, default=st.session_state.get('selected_analytes', []))
     st.session_state['selected_analytes'] = selected_analytes
     
-    # Allow user to select the color column
-    # Exclude columns that are already used for the x and y axes or other important data
+    # Allow user to select the color based on a specific column (e.g., 'Result' or any numeric column)
     available_color_columns = [col for col in data.columns if col not in [holeid_col, from_col, to_col]]
-    selected_color = st.selectbox("Select Colour", options=available_color_columns, index=st.session_state.get('selected_color_index', 0))
-    st.session_state['selected_color_index'] = available_color_columns.index(selected_color)
+    selected_color_column = st.selectbox("Select Color by Column", options=available_color_columns, index=st.session_state.get('selected_color_index', 0))
+    st.session_state['selected_color_index'] = available_color_columns.index(selected_color_column)
     
     # Allow user to select hover data options
     hover_data_options = st.multiselect("Select hover data", options=data.columns, default=st.session_state.get('hover_data_options', []))
@@ -112,16 +111,16 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     data.loc[:, 'Interval Midpoint'] = (data[from_col] + data[to_col]) / 2
     
     # Prepare data for melting (plotting)
-    id_vars = [holeid_col, from_col, to_col, 'Interval Midpoint'] + hover_data_options + [selected_color]
+    id_vars = [holeid_col, from_col, to_col, 'Interval Midpoint'] + hover_data_options + [selected_color_column]
     melted_data = data.melt(id_vars=id_vars, value_vars=selected_analytes, var_name='Analyte', value_name='Result')
 
-    # Create the plot with selected color column
+    # Create the plot with color based on the selected data column (e.g., 'Result' or other)
     downholeplot = px.line(
         melted_data, 
         x='Result', 
         y='Interval Midpoint', 
-        color=selected_color,  # Set the color based on user selection
-        line_group=holeid_col, 
+        color=selected_color_column,  # Color lines based on the selected data column
+        line_group=holeid_col,  # Each line corresponds to a drill hole
         markers=True, 
         facet_col='Analyte', 
         facet_col_wrap=4, 
