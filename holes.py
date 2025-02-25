@@ -119,6 +119,7 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     id_vars = [holeid_col, from_col, to_col, 'Interval Midpoint'] + hover_data_options + [selected_color_column]
     melted_data = data.melt(id_vars=id_vars, value_vars=selected_analytes, var_name='Analyte', value_name='Result')
     st.write(melted_data)
+    st.write(selected_color_column)
     # Create the plot where the line color is based on the selected column, and the lines are grouped by the user-selected group variable
     downholeplot = px.line(
         melted_data, 
