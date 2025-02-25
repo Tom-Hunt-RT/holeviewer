@@ -89,6 +89,10 @@ def filterdata(filters, data):
     return data
 
 # Downhole plots
+import plotly.express as px
+import pandas as pd
+import streamlit as st
+
 def createdownholeplots(data, holeid_col, from_col, to_col):
     # Allow user to select the analytes they want to plot
     selected_analytes = st.multiselect("Select variable to plot", options=data.columns, default=st.session_state.get('selected_analytes', []))
@@ -114,8 +118,8 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     id_vars = [holeid_col, from_col, to_col, 'Interval Midpoint'] + hover_data_options + [selected_color_column]
     melted_data = data.melt(id_vars=id_vars, value_vars=selected_analytes, var_name='Analyte', value_name='Result')
     
-    # Create the scatter plot with lines, with color reflecting the selected variable (Lithology or similar)
-    downholeplot = px.scatter(
+    # Create the line plot with color reflecting the selected variable (Lithology)
+    downholeplot = px.line(
         melted_data, 
         x='Result',  # Plot the selected analyte (e.g., Cu_pct) on the x-axis
         y='Interval Midpoint',  # Plot depth (midpoint of the interval) on the y-axis
@@ -142,6 +146,7 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     
     # Display the plot
     st.plotly_chart(downholeplot, key="downholeplot")
+
 
 
 
