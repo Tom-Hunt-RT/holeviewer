@@ -95,8 +95,8 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     st.session_state['selected_analytes'] = selected_analytes
     
     # Allow user to select the column by which to color the line (e.g., 'Result' or any numeric column)
-    available_color_columns = [col for col in data.columns if col not in [holeid_col, from_col, to_col]]
-    selected_color_column = st.selectbox("Select Color by Column", options=available_color_columns, index=st.session_state.get('selected_color_index', 0))
+    available_color_columns = [col for col in data.columns]
+    selected_color_column = st.selectbox("Select Color", options=available_color_columns, index=st.session_state.get('selected_color_index', 0))
     st.session_state['selected_color_index'] = available_color_columns.index(selected_color_column)
     
     # Allow user to select hover data options
@@ -104,7 +104,7 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     st.session_state['hover_data_options'] = hover_data_options
 
     # Allow user to select the column by which to group the lines (this replaces line_group=holeid_col)
-    available_groupby_columns = [col for col in data.columns if col not in [from_col, to_col, selected_color_column] + hover_data_options]
+    available_groupby_columns = [col for col in data.columns]
     selected_groupby_column = st.selectbox("Select Grouping Variable", options=available_groupby_columns, index=st.session_state.get('selected_groupby_index', 0))
     st.session_state['selected_groupby_index'] = available_groupby_columns.index(selected_groupby_column)
 
@@ -118,7 +118,7 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     # Prepare data for melting (plotting)
     id_vars = [holeid_col, from_col, to_col, 'Interval Midpoint'] + hover_data_options + [selected_color_column]
     melted_data = data.melt(id_vars=id_vars, value_vars=selected_analytes, var_name='Analyte', value_name='Result')
-
+    st.write(melted_data)
     # Create the plot where the line color is based on the selected column, and the lines are grouped by the user-selected group variable
     downholeplot = px.line(
         melted_data, 
