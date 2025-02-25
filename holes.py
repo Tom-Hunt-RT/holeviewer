@@ -114,15 +114,15 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     id_vars = [holeid_col, from_col, to_col, 'Interval Midpoint'] + hover_data_options + [selected_color_column]
     melted_data = data.melt(id_vars=id_vars, value_vars=selected_analytes, var_name='Analyte', value_name='Result')
     
-    # Create the plot where the line color is based on the selected color column, and the lines are grouped by drill hole
+    # Create the plot where the lines are grouped by drill hole and colored by the selected color column
     downholeplot = px.line(
         melted_data, 
         x='Result', 
         y='Interval Midpoint', 
-        color=selected_color_column,  # Color the lines based on this selected column (e.g., lithological boundary)
-        line_group=holeid_col,  # Group the lines by drill hole
+        color=selected_color_column,  # Color the lines based on the selected column (e.g., lithology)
+        line_group=holeid_col,  # Keep the lines grouped by drill hole (no change in line grouping)
         markers=True, 
-        facet_col='Analyte',  # Facet by analyte (separate subplots for each)
+        facet_col='Analyte',  # Facet by analyte if there are multiple
         facet_col_wrap=4,  # Number of subplots in one row
         hover_data={col: True for col in hover_data_options}  # Add hover data
     )
@@ -146,7 +146,6 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     
     # Display the plot
     st.plotly_chart(downholeplot, key="downholeplot")
-
 
 
 # Calculcate unique combos of values
