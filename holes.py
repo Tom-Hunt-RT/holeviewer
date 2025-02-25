@@ -90,27 +90,62 @@ def filterdata(filters, data):
 
 # Downhole plots
 def createdownholeplots(data, holeid_col, from_col, to_col):
+    # Allow user to select the analytes they want to plot
     selected_analytes = st.multiselect("Select variable to plot", options=data.columns, default=st.session_state.get('selected_analytes', []))
     st.session_state['selected_analytes'] = selected_analytes
-    selected_color = st.selectbox("Select Colour", options=data.columns, index=st.session_state.get('selected_color_index', 0))
-    st.session_state['selected_color_index'] = data.columns.get_loc(selected_color)
+    
+    # Allow user to select the color column
+    # Exclude columns that are already used for the x and y axes or other important data
+    available_color_columns = [col for col in data.columns if col not in [holeid_col, from_col, to_col]]
+    selected_color = st.selectbox("Select Colour", options=available_color_columns, index=st.session_state.get('selected_color_index', 0))
+    st.session_state['selected_color_index'] = available_color_columns.index(selected_color)
+    
+    # Allow user to select hover data options
     hover_data_options = st.multiselect("Select hover data", options=data.columns, default=st.session_state.get('hover_data_options', []))
     st.session_state['hover_data_options'] = hover_data_options
 
+    # Convert columns 'from' and 'to' to numeric to avoid errors
     data[from_col] = pd.to_numeric(data[from_col], errors='coerce')
     data[to_col] = pd.to_numeric(data[to_col], errors='coerce')
+
+    # Calculate interval midpoint
     data.loc[:, 'Interval Midpoint'] = (data[from_col] + data[to_col]) / 2
     
-    id_vars = [holeid_col, from_col, to_col, 'Interval Midpoint'] + hover_data_options + selected_color
+    # Prepare data for melting (plotting)
+    id_vars = [holeid_col, from_col, to_col, 'Interval Midpoint'] + hover_data_options + [selected_color]
     melted_data = data.melt(id_vars=id_vars, value_vars=selected_analytes, var_name='Analyte', value_name='Result')
 
-    downholeplot = px.line(melted_data, x='Result', y='Interval Midpoint', color=selected_color, line_group=holeid_col, markers=True, facet_col='Analyte', facet_col_wrap=4, hover_data={col: True for col in hover_data_options})
+    # Create the plot with selected color column
+    downholeplot = px.line(
+        melted_data, 
+        x='Result', 
+        y='Interval Midpoint', 
+        color=selected_color,  # Set the color based on user selection
+        line_group=holeid_col, 
+        markers=True, 
+        facet_col='Analyte', 
+        facet_col_wrap=4, 
+        hover_data={col: True for col in hover_data_options}
+    )
+    
+    # Update plot axes and layout
     downholeplot.update_yaxes(autorange='reversed')
     downholeplot.update_xaxes(matches=None)
     stretchy_height = st.slider("Slide to stretch the y-axis", min_value=300, max_value=5000, value=1800, step=10, key="stretchy_height")
     stretchy_width = st.slider("Slide to stretch the x-axis", min_value=300, max_value=5000, value=1800, step=10, key="stretchy_width")
-    downholeplot.update_layout(xaxis_title='Results', yaxis_title='Interval Midpoint', title='Results by Drill Hole and Interval Midpoint', height=stretchy_height, width=stretchy_width)
+    
+    # Update layout with user-defined size
+    downholeplot.update_layout(
+        xaxis_title='Results', 
+        yaxis_title='Interval Midpoint', 
+        title='Results by Drill Hole and Interval Midpoint', 
+        height=stretchy_height, 
+        width=stretchy_width
+    )
+    
+    # Display the plot
     st.plotly_chart(downholeplot, key="downholeplot")
+
 
 # Calculcate unique combos of values
 def variabilityanalysis(data, holeid_col, from_col, to_col):
