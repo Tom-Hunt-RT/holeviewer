@@ -96,7 +96,7 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     
     # Allow user to select the column by which to color the lines (e.g., lithological boundaries)
     available_color_columns = [col for col in data.columns if col not in [holeid_col, from_col, to_col]]
-    selected_color_column = st.selectbox("Select Color", options=available_color_columns, index=st.session_state.get('selected_color_index', 0))
+    selected_color_column = st.selectbox("Select Color by Column", options=available_color_columns, index=st.session_state.get('selected_color_index', 0))
     st.session_state['selected_color_index'] = available_color_columns.index(selected_color_column)
     
     # Allow user to select hover data options
@@ -114,21 +114,24 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     id_vars = [holeid_col, from_col, to_col, 'Interval Midpoint'] + hover_data_options + [selected_color_column]
     melted_data = data.melt(id_vars=id_vars, value_vars=selected_analytes, var_name='Analyte', value_name='Result')
 
-    # Create the plot
+    # Create the plot where:
+    # - The x-axis shows the selected variable (Copper_Pct).
+    # - The color of each line is based on the selected color variable (Lithology).
+    # - The lines are grouped by drill hole (holeid_col).
     downholeplot = px.line(
         melted_data, 
-        x='Result', 
-        y='Interval Midpoint', 
-        color=selected_color_column,  # Color the lines based on the selected column (e.g., lithology)
-        line_group=holeid_col,  # Keep the lines grouped by drill hole
-        markers=True, 
+        x='Result',  # This is Copper_Pct or any selected analyte
+        y='Interval Midpoint',  # Depth intervals
+        color=selected_color_column,  # Color by Lithology or selected color column
+        line_group=holeid_col,  # Each line represents a unique drill hole
+        markers=True,  # Show markers on the line
         facet_col='Analyte',  # Facet by analyte if there are multiple
         facet_col_wrap=4,  # Number of subplots in one row
-        hover_data={col: True for col in hover_data_options}  # Add hover data
+        hover_data={col: True for col in hover_data_options}  # Hover data to show extra information
     )
     
     # Update plot axes and layout
-    downholeplot.update_yaxes(autorange='reversed')  # Reverse the y-axis to make it represent depth
+    downholeplot.update_yaxes(autorange='reversed')  # Reverse the y-axis to represent depth properly
     downholeplot.update_xaxes(matches=None)  # Disable the matching of x-axes for faceted plots
     
     # Add sliders for adjusting plot size dynamically
@@ -137,7 +140,7 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     
     # Update layout with user-defined size
     downholeplot.update_layout(
-        xaxis_title='Results', 
+        xaxis_title='Results (e.g., Copper_Pct)', 
         yaxis_title='Interval Midpoint', 
         title='Results by Drill Hole and Interval Midpoint', 
         height=stretchy_height, 
@@ -146,7 +149,6 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     
     # Display the plot
     st.plotly_chart(downholeplot, key="downholeplot")
-
 
 
 # Calculcate unique combos of values
