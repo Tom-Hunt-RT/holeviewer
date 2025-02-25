@@ -113,7 +113,7 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     id_vars = [holeid_col, from_col, to_col, 'Interval Midpoint'] + hover_data_options
     melted_data = data.melt(id_vars=id_vars, value_vars=selected_analytes, var_name='Analyte', value_name='Result')
     
-    # Initialize the plot
+    # Create the base plot with plotly.express
     downholeplot = px.line(melted_data, x='Result', y='Interval Midpoint', color=selected_color, line_group=holeid_col, markers=True, facet_col='Analyte', facet_col_wrap=4, hover_data={col: True for col in hover_data_options})
     
     # Add boundary or shading depending on the selected variable
@@ -121,28 +121,14 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
         # For categorical variables, create colored bands
         for cat_value in data[boundary_col].unique():
             cat_data = data[data[boundary_col] == cat_value]
-            downholeplot.add_trace(go.Scatter(
-                x=[cat_data[from_col].min(), cat_data[to_col].max()],
-                y=[cat_data['Interval Midpoint'].min(), cat_data['Interval Midpoint'].max()],
-                fill='toself',
-                fillcolor=f'rgba({px.colors.qualitative.Set1.index(cat_value) * 30}, 100, 200, 0.2)',  # Apply different colors for each category
-                line=dict(color='rgba(0,0,0,0)'),
-                name=f'Category: {cat_value}',
-                showlegend=False
-            ))
+            downholeplot.add_trace(px.scatter(cat_data, x=[cat_data[from_col].min(), cat_data[to_col].max()], y=[cat_data['Interval Midpoint'].min(), cat_data['Interval Midpoint'].max()],
+                                             fill='toself', color_discrete_sequence=[px.colors.qualitative.Set1[0]]).data[0])
     
     else:
         # For numeric variables, use continuous color shading
-        for idx, row in data.iterrows():
-            downholeplot.add_trace(go.Scatter(
-                x=[row[from_col], row[to_col]],
-                y=[row['Interval Midpoint'], row['Interval Midpoint']],
-                mode='lines',
-                line=dict(color=px.colors.sequential.Viridis[int(row[boundary_col] * 255 / data[boundary_col].max())], width=6),
-                name=f'{row[boundary_col]}',
-                showlegend=False
-            ))
-
+        # Create a continuous shading effect using a color scale
+        downholeplot = px.scatter(data, x=from_col, y='Interval Midpoint', color=boundary_col, color_continuous_scale="Viridis", title="Shading by Boundary Variable")
+    
     # Reverse depth axis to have top-to-bottom orientation
     downholeplot.update_yaxes(autorange='reversed')
     downholeplot.update_xaxes(matches=None)
@@ -162,6 +148,7 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     
     # Display the plot
     st.plotly_chart(downholeplot, key="downholeplot")
+
 
 
 # Calculcate unique combos of values
