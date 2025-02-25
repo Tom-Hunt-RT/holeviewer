@@ -90,27 +90,79 @@ def filterdata(filters, data):
 
 # Downhole plots
 def createdownholeplots(data, holeid_col, from_col, to_col):
+    # Select variable to plot
     selected_analytes = st.multiselect("Select variable to plot", options=data.columns, default=st.session_state.get('selected_analytes', []))
     st.session_state['selected_analytes'] = selected_analytes
     selected_color = st.selectbox("Select Colour", options=data.columns, index=st.session_state.get('selected_color_index', 0))
     st.session_state['selected_color_index'] = data.columns.get_loc(selected_color)
     hover_data_options = st.multiselect("Select hover data", options=data.columns, default=st.session_state.get('hover_data_options', []))
     st.session_state['hover_data_options'] = hover_data_options
-
+    
+    # Ensure numeric conversion of depth columns
     data[from_col] = pd.to_numeric(data[from_col], errors='coerce')
     data[to_col] = pd.to_numeric(data[to_col], errors='coerce')
+    
+    # Calculate interval midpoints
     data.loc[:, 'Interval Midpoint'] = (data[from_col] + data[to_col]) / 2
     
+    # Allow the user to choose a variable for boundaries/shading
+    boundary_col = st.selectbox("Select variable for boundaries or shading", options=data.columns)
+    is_categorical = data[boundary_col].dtype == 'object' or data[boundary_col].dtype.name == 'category'  # Check if the column is categorical
+    
+    # Melt data for plotting
     id_vars = [holeid_col, from_col, to_col, 'Interval Midpoint'] + hover_data_options
     melted_data = data.melt(id_vars=id_vars, value_vars=selected_analytes, var_name='Analyte', value_name='Result')
-
+    
+    # Initialize the plot
     downholeplot = px.line(melted_data, x='Result', y='Interval Midpoint', color=selected_color, line_group=holeid_col, markers=True, facet_col='Analyte', facet_col_wrap=4, hover_data={col: True for col in hover_data_options})
+    
+    # Add boundary or shading depending on the selected variable
+    if is_categorical:
+        # For categorical variables, create colored bands
+        for cat_value in data[boundary_col].unique():
+            cat_data = data[data[boundary_col] == cat_value]
+            downholeplot.add_trace(go.Scatter(
+                x=[cat_data[from_col].min(), cat_data[to_col].max()],
+                y=[cat_data['Interval Midpoint'].min(), cat_data['Interval Midpoint'].max()],
+                fill='toself',
+                fillcolor=f'rgba({px.colors.qualitative.Set1.index(cat_value) * 30}, 100, 200, 0.2)',  # Apply different colors for each category
+                line=dict(color='rgba(0,0,0,0)'),
+                name=f'Category: {cat_value}',
+                showlegend=False
+            ))
+    
+    else:
+        # For numeric variables, use continuous color shading
+        for idx, row in data.iterrows():
+            downholeplot.add_trace(go.Scatter(
+                x=[row[from_col], row[to_col]],
+                y=[row['Interval Midpoint'], row['Interval Midpoint']],
+                mode='lines',
+                line=dict(color=px.colors.sequential.Viridis[int(row[boundary_col] * 255 / data[boundary_col].max())], width=6),
+                name=f'{row[boundary_col]}',
+                showlegend=False
+            ))
+
+    # Reverse depth axis to have top-to-bottom orientation
     downholeplot.update_yaxes(autorange='reversed')
     downholeplot.update_xaxes(matches=None)
+    
+    # User interface for adjusting plot size
     stretchy_height = st.slider("Slide to stretch the y-axis", min_value=300, max_value=5000, value=1800, step=10, key="stretchy_height")
     stretchy_width = st.slider("Slide to stretch the x-axis", min_value=300, max_value=5000, value=1800, step=10, key="stretchy_width")
-    downholeplot.update_layout(xaxis_title='Results', yaxis_title='Interval Midpoint', title='Results by Drill Hole and Interval Midpoint', height=stretchy_height, width=stretchy_width)
+    
+    # Final layout configuration
+    downholeplot.update_layout(
+        xaxis_title='Results', 
+        yaxis_title='Interval Midpoint', 
+        title='Results by Drill Hole and Interval Midpoint', 
+        height=stretchy_height, 
+        width=stretchy_width
+    )
+    
+    # Display the plot
     st.plotly_chart(downholeplot, key="downholeplot")
+
 
 # Calculcate unique combos of values
 def variabilityanalysis(data, holeid_col, from_col, to_col):
