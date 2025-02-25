@@ -94,7 +94,7 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     selected_analytes = st.multiselect("Select variable to plot", options=data.columns, default=st.session_state.get('selected_analytes', []))
     st.session_state['selected_analytes'] = selected_analytes
     
-    # Allow user to select the column by which to color the lines (e.g., Lithology or similar)
+    # Allow user to select the column by which to color the points/line segments (e.g., Lithology)
     available_color_columns = [col for col in data.columns if col not in [holeid_col, from_col, to_col]]
     selected_color_column = st.selectbox("Select Color by Column", options=available_color_columns, index=st.session_state.get('selected_color_index', 0))
     st.session_state['selected_color_index'] = available_color_columns.index(selected_color_column)
@@ -114,32 +114,28 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     id_vars = [holeid_col, from_col, to_col, 'Interval Midpoint'] + hover_data_options + [selected_color_column]
     melted_data = data.melt(id_vars=id_vars, value_vars=selected_analytes, var_name='Analyte', value_name='Result')
     
-    # Create the plot where each line segment represents a drill hole, with color changing based on lithology (or another selected variable)
-    downholeplot = px.line(
+    # Create the scatter plot with lines, with color reflecting the selected variable (Lithology or similar)
+    downholeplot = px.scatter(
         melted_data, 
         x='Result',  # Plot the selected analyte (e.g., Cu_pct) on the x-axis
-        y='Interval Midpoint',  # Plot depth on the y-axis
-        color=selected_color_column,  # Color each segment by lithology (or another variable)
-        line_group=holeid_col,  # Group the lines by drill hole
-        markers=True,  # Add markers for each data point
-        facet_col='Analyte',  # Facet by analyte if multiple are selected
-        facet_col_wrap=4,  # Wrap facets for readability
-        hover_data={col: True for col in hover_data_options}  # Hover data options
+        y='Interval Midpoint',  # Plot depth (midpoint of the interval) on the y-axis
+        color=selected_color_column,  # Color each point by lithology (or another variable)
+        line_group=holeid_col,  # Group by drill hole (Holeid) to create separate traces
+        markers=True,  # Show markers for each depth interval
+        hover_data={col: True for col in hover_data_options},  # Hover data options
+        title="Downhole Plot"
     )
     
-    # Update plot axes and layout
+    # Update the plot layout
     downholeplot.update_yaxes(autorange='reversed')  # Reverse the y-axis for depth representation
-    downholeplot.update_xaxes(matches=None)  # Disable axis matching between facets
+    downholeplot.update_xaxes(title='Analyte Value (e.g., Cu_pct)')
+    downholeplot.update_yaxes(title='Depth (Interval Midpoint)')
     
-    # Add sliders for adjusting plot size dynamically
+    # Update the plot size dynamically based on user input
     stretchy_height = st.slider("Slide to stretch the y-axis", min_value=300, max_value=5000, value=1800, step=10, key="stretchy_height")
     stretchy_width = st.slider("Slide to stretch the x-axis", min_value=300, max_value=5000, value=1800, step=10, key="stretchy_width")
     
-    # Update layout with user-defined size
     downholeplot.update_layout(
-        xaxis_title='Result (e.g., Cu_pct)', 
-        yaxis_title='Interval Midpoint', 
-        title='Results by Drill Hole and Interval Midpoint', 
         height=stretchy_height, 
         width=stretchy_width
     )
