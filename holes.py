@@ -103,6 +103,11 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     hover_data_options = st.multiselect("Select hover data", options=data.columns, default=st.session_state.get('hover_data_options', []))
     st.session_state['hover_data_options'] = hover_data_options
 
+    # Allow user to select the column by which to group the lines (this replaces line_group=holeid_col)
+    available_groupby_columns = [col for col in data.columns if col not in [from_col, to_col, selected_color_column] + hover_data_options]
+    selected_groupby_column = st.selectbox("Select Grouping Variable", options=available_groupby_columns, index=st.session_state.get('selected_groupby_index', 0))
+    st.session_state['selected_groupby_index'] = available_groupby_columns.index(selected_groupby_column)
+
     # Convert columns 'from' and 'to' to numeric to avoid errors
     data[from_col] = pd.to_numeric(data[from_col], errors='coerce')
     data[to_col] = pd.to_numeric(data[to_col], errors='coerce')
@@ -114,13 +119,13 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     id_vars = [holeid_col, from_col, to_col, 'Interval Midpoint'] + hover_data_options + [selected_color_column]
     melted_data = data.melt(id_vars=id_vars, value_vars=selected_analytes, var_name='Analyte', value_name='Result')
 
-    # Create the plot where the line color is based on the selected column, but each line is a unique drill hole
+    # Create the plot where the line color is based on the selected column, and the lines are grouped by the user-selected group variable
     downholeplot = px.line(
         melted_data, 
         x='Result', 
         y='Interval Midpoint', 
         color=selected_color_column,  # Color the lines based on this selected column
-        line_group=holeid_col,  # Group the lines by drill hole (independent of color)
+        line_group=selected_groupby_column,  # Group the lines by user-selected column
         markers=True, 
         facet_col='Analyte',  # Facet by analyte if there are multiple
         facet_col_wrap=4, 
