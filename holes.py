@@ -89,59 +89,7 @@ def filterdata(filters, data):
     return data
 
 # Downhole plots
-def createdownholeplots(data, holeid_col, from_col, to_col):
-    # Allow user to select the analytes they want to plot
-    selected_analytes = st.multiselect("Select variable to plot", options=data.columns, default=st.session_state.get('selected_analytes', []))
-    st.session_state['selected_analytes'] = selected_analytes
-    
-    # Allow user to select the column by which to color the points/line segments (e.g., Lithology)
-    available_color_columns = [col for col in data.columns if col not in [holeid_col, from_col, to_col]]
-    selected_color_column = st.selectbox("Select Color by Column", options=available_color_columns, index=st.session_state.get('selected_color_index', 0))
-    st.session_state['selected_color_index'] = available_color_columns.index(selected_color_column)
-    
-    # Allow user to select hover data options
-    hover_data_options = st.multiselect("Select hover data", options=data.columns, default=st.session_state.get('hover_data_options', []))
-    st.session_state['hover_data_options'] = hover_data_options
 
-    # Convert columns 'from' and 'to' to numeric to avoid errors
-    data[from_col] = pd.to_numeric(data[from_col], errors='coerce')
-    data[to_col] = pd.to_numeric(data[to_col], errors='coerce')
-
-    # Calculate interval midpoint
-    data.loc[:, 'Interval Midpoint'] = (data[from_col] + data[to_col]) / 2
-    
-    # Prepare data for melting (plotting)
-    id_vars = [holeid_col, from_col, to_col, 'Interval Midpoint'] + hover_data_options + [selected_color_column]
-    melted_data = data.melt(id_vars=id_vars, value_vars=selected_analytes, var_name='Analyte', value_name='Result')
-
-    # Create the line plot with color reflecting the selected variable (Lithology)
-    downholeplot = px.line(
-        melted_data, 
-        x='Result',  # Plot the selected analyte (e.g., Cu_pct) on the x-axis
-        y='Interval Midpoint',  # Plot depth (midpoint of the interval) on the y-axis
-        color=selected_color_column,  # Color each point by lithology (or another variable)
-        line_group=holeid_col,  # Group by drill hole (Holeid) to create separate traces for each drill hole
-        markers=True,  # Show markers for each depth interval
-        hover_data={col: True for col in hover_data_options},  # Hover data options
-        title="Downhole Plot"
-    )
-    
-    # Update the plot layout
-    downholeplot.update_yaxes(autorange='reversed')  # Reverse the y-axis for depth representation
-    downholeplot.update_xaxes(title='Analyte Value (e.g., Cu_pct)')
-    downholeplot.update_yaxes(title='Depth (Interval Midpoint)')
-    
-    # Update the plot size dynamically based on user input
-    stretchy_height = st.slider("Slide to stretch the y-axis", min_value=300, max_value=5000, value=1800, step=10, key="stretchy_height")
-    stretchy_width = st.slider("Slide to stretch the x-axis", min_value=300, max_value=5000, value=1800, step=10, key="stretchy_width")
-    
-    downholeplot.update_layout(
-        height=stretchy_height, 
-        width=stretchy_width
-    )
-    
-    # Display the plot
-    st.plotly_chart(downholeplot, key="downholeplot")
 
 # Calculcate unique combos of values
 def variabilityanalysis(data, holeid_col, from_col, to_col):
