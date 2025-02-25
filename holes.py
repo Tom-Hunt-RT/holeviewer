@@ -129,7 +129,7 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
         facet_col_wrap=4,  # Number of subplots in one row
         hover_data={col: True for col in hover_data_options}  # Hover data to show extra information
     )
-    
+    st.write(melted_data)
     # Update plot axes and layout
     downholeplot.update_yaxes(autorange='reversed')  # Reverse the y-axis to represent depth properly
     downholeplot.update_xaxes(matches=None)  # Disable the matching of x-axes for faceted plots
