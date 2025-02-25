@@ -123,6 +123,12 @@ def variabilityanalysis(data, holeid_col, from_col, to_col):
     if not groupby_columns or not value_column:
         return pd.DataFrame(columns=['Combination', 'Count', 'Counts_Percentage', 'Mean Value', 'Median Value', 'Min Value', 'Max Value', 'Range'])
 
+    # Convert the value column to numeric, coercing errors to NaN
+    data[value_column] = pd.to_numeric(data[value_column], errors='coerce')
+
+    # Drop rows with NaN values in the value column
+    data = data.dropna(subset=[value_column])
+
     # Perform the analysis if valid selections are made
     data['unique_id'] = data[holeid_col].astype(str) + '_' + data[from_col].astype(str) + '_' + data[to_col].astype(str)
     combinations = data.groupby(groupby_columns)['unique_id'].nunique().reset_index()
