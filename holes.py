@@ -118,12 +118,12 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     
     # Add boundary or shading depending on the selected variable
     if is_categorical:
-        # For categorical variables, create colored bands
+        # For categorical variables, create filled areas (shading) by depth intervals
         for cat_value in data[boundary_col].unique():
             cat_data = data[data[boundary_col] == cat_value]
-            downholeplot.add_trace(px.scatter(cat_data, x=[cat_data[from_col].min(), cat_data[to_col].max()], y=[cat_data['Interval Midpoint'].min(), cat_data['Interval Midpoint'].max()],
-                                             fill='toself', color_discrete_sequence=[px.colors.qualitative.Set1[0]]).data[0])
-    
+            # Use a scatter plot to draw the boundary areas for categorical values
+            downholeplot.add_trace(px.scatter(cat_data, x=from_col, y='Interval Midpoint', color=boundary_col, 
+                                             color_discrete_sequence=[px.colors.qualitative.Set1[0]]).data[0])
     else:
         # For numeric variables, use continuous color shading
         # Create a continuous shading effect using a color scale
@@ -148,7 +148,6 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     
     # Display the plot
     st.plotly_chart(downholeplot, key="downholeplot")
-
 
 
 # Calculcate unique combos of values
