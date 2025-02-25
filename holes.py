@@ -101,7 +101,7 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     data[to_col] = pd.to_numeric(data[to_col], errors='coerce')
     data.loc[:, 'Interval Midpoint'] = (data[from_col] + data[to_col]) / 2
     
-    id_vars = [holeid_col, from_col, to_col, 'Interval Midpoint'] + hover_data_options
+    id_vars = [holeid_col, from_col, to_col, 'Interval Midpoint'] + hover_data_options + selected_color
     melted_data = data.melt(id_vars=id_vars, value_vars=selected_analytes, var_name='Analyte', value_name='Result')
 
     downholeplot = px.line(melted_data, x='Result', y='Interval Midpoint', color=selected_color, line_group=holeid_col, markers=True, facet_col='Analyte', facet_col_wrap=4, hover_data={col: True for col in hover_data_options})
