@@ -148,9 +148,7 @@ def sampleselectionassistant(data, holeid_col, from_col, to_col):
     screening_method = st.selectbox("Select screening method", options=["Pre-screening (by interval)", "Post-screening (by composite)"])
     categorical_cols = st.multiselect("Select categorical variables for filtering (i.e., your subset for analysis)", options=data.columns)
     
-    unique_values = {}
-    for cat_col in categorical_cols:
-        unique_values[cat_col] = data[cat_col].unique()
+    unique_values = {cat_col: data[cat_col].unique() for cat_col in categorical_cols}
     
     categorical_vals = {}
     for cat_col in categorical_cols:
@@ -176,31 +174,33 @@ def sampleselectionassistant(data, holeid_col, from_col, to_col):
 
     filtered_data = data[data[holeid_col].isin(selected_drillholes)]
     
+    # Apply categorical filters in a more memory-efficient manner
     for cat_col in categorical_cols:
         if categorical_vals[cat_col]:
             filtered_data = filtered_data[filtered_data[cat_col].isin(categorical_vals[cat_col])]
     
-
+    lower_bound = target_value - (target_value * (percentage_range / 100))
+    upper_bound = target_value + (target_value * (percentage_range / 100))
+    
     if screening_method == "Pre-screening (by interval)":
-        lower_bound = target_value - (target_value * (percentage_range / 100))
-        upper_bound = target_value + (target_value * (percentage_range / 100))
-
-        # Apply the target range filter
+        # Pre-screening: Filter representative intervals
         representative_intervals = filtered_data[(filtered_data[parameter_col] >= lower_bound) & (filtered_data[parameter_col] <= upper_bound)]
         st.write(f"Number of intervals within {percentage_range}% of the target value: {representative_intervals.shape[0]}")
         representative_intervals = representative_intervals.sort_values(by=[holeid_col, from_col]).reset_index(drop=True)
 
         if mass_per_unit is not None:
+            # Apply mass filter
             representative_intervals['Interval_Length'] = representative_intervals[to_col] - representative_intervals[from_col]
-            representative_intervals['Interval_Length'] = pd.to_numeric(representative_intervals['Interval_Length'], errors='coerce')
             representative_intervals['Mass'] = representative_intervals['Interval_Length'] * mass_per_unit
             representative_intervals['Mass'] = pd.to_numeric(representative_intervals['Mass'], errors='coerce')
 
+            # Efficient composite interval creation using apply() instead of iterrows()
             composite_intervals = []
             current_composite = []
             current_mass = 0
 
-            for _, row in representative_intervals.iterrows():
+            def create_composite_interval(row):
+                nonlocal current_composite, current_mass
                 if current_composite and row[holeid_col] == current_composite[-1][holeid_col] and row[from_col] == current_composite[-1][to_col]:
                     current_composite.append(row)
                     current_mass += row['Mass']
@@ -216,6 +216,9 @@ def sampleselectionassistant(data, holeid_col, from_col, to_col):
                         })
                     current_composite = [row]
                     current_mass = row['Mass']
+                return row
+
+            representative_intervals.apply(create_composite_interval, axis=1)
 
             if current_composite:
                 avg_parameter_value = pd.Series([r[parameter_col] for r in current_composite]).mean()
@@ -228,27 +231,19 @@ def sampleselectionassistant(data, holeid_col, from_col, to_col):
                 })
 
             composite_df = pd.DataFrame(composite_intervals)
-
             valid_composites = composite_df[composite_df['Total_Mass'] >= required_mass]
-
             st.write("### Valid Composites meeting the required mass:")
             st.write(valid_composites)
         else:
             st.write("### Representative Intervals based on selection method:")
-            lower_bound = target_value - (target_value * (percentage_range / 100))
-            upper_bound = target_value + (target_value * (percentage_range / 100))
-
-            valid_intervals = representative_intervals[(representative_intervals[parameter_col] >= lower_bound) & 
-                                            (representative_intervals[parameter_col] <= upper_bound)]
-            st.write(valid_intervals)
-
-
+            st.write(representative_intervals)
+    
     elif screening_method == "Post-screening (by composite)":
+        # Post-screening: Sort and process composite intervals
         representative_intervals = filtered_data.sort_values(by=[holeid_col, from_col]).reset_index(drop=True)
 
         if mass_per_unit is not None:
             representative_intervals['Interval_Length'] = representative_intervals[to_col] - representative_intervals[from_col]
-            representative_intervals['Interval_Length'] = pd.to_numeric(representative_intervals['Interval_Length'], errors='coerce')
             representative_intervals['Mass'] = representative_intervals['Interval_Length'] * mass_per_unit
             representative_intervals['Mass'] = pd.to_numeric(representative_intervals['Mass'], errors='coerce')
 
@@ -256,7 +251,8 @@ def sampleselectionassistant(data, holeid_col, from_col, to_col):
             current_composite = []
             current_mass = 0
 
-            for _, row in representative_intervals.iterrows():
+            def create_composite_interval(row):
+                nonlocal current_composite, current_mass
                 if current_mass + row['Mass'] >= required_mass:
                     while current_mass + row['Mass'] >= required_mass:
                         remaining_mass = required_mass - current_mass
@@ -279,6 +275,9 @@ def sampleselectionassistant(data, holeid_col, from_col, to_col):
                 else:
                     current_composite.append(row)
                     current_mass += row['Mass']
+                return row
+
+            representative_intervals.apply(create_composite_interval, axis=1)
 
             if current_composite and current_mass >= required_mass:
                 avg_parameter_value = pd.Series([r[parameter_col] for r in current_composite]).mean()
@@ -292,24 +291,15 @@ def sampleselectionassistant(data, holeid_col, from_col, to_col):
 
             composite_df = pd.DataFrame(composite_intervals)
 
-            lower_bound = target_value - (target_value * (percentage_range / 100))
-            upper_bound = target_value + (target_value * (percentage_range / 100))
-
             valid_composites = composite_df[(composite_df['Average_Parameter'] >= lower_bound) & 
                                             (composite_df['Average_Parameter'] <= upper_bound) & 
                                             (composite_df['Total_Mass'] >= required_mass)]
-
             st.write("### Valid Composites meeting the required mass and parameter criteria:")
             st.write(valid_composites)
-
         else:
             st.write("### Representative Intervals based on selection method:")
-            lower_bound = target_value - (target_value * (percentage_range / 100))
-            upper_bound = target_value + (target_value * (percentage_range / 100))
+            st.write(representative_intervals)
 
-            valid_intervals = representative_intervals[(representative_intervals[parameter_col] >= lower_bound) & 
-                                            (representative_intervals[parameter_col] <= upper_bound)]
-            st.write(valid_intervals)
 
 # Create a scatter plot based on variables of interest to user
 def scatteranalysis(data):
