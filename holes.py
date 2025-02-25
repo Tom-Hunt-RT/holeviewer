@@ -90,7 +90,10 @@ def filterdata(filters, data):
 
 # Downhole plots
 def createdownholeplots(data, holeid_col, from_col, to_col):
-    # Allow user to select the analytes they want to plot
+    # Allow user to select which drill holes to plot
+    selected_drillholes = st.multiselect("Select Drill Holes", options=data[holeid_col].unique(), default=data[holeid_col].unique())
+    
+    # Allow user to select the analyte variable to plot
     selected_analytes = st.multiselect("Select variable to plot", options=data.columns, default=st.session_state.get('selected_analytes', []))
     st.session_state['selected_analytes'] = selected_analytes
     
@@ -103,18 +106,21 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     hover_data_options = st.multiselect("Select hover data", options=data.columns, default=st.session_state.get('hover_data_options', []))
     st.session_state['hover_data_options'] = hover_data_options
 
+    # Filter data for selected drill holes
+    data_filtered = data[data[holeid_col].isin(selected_drillholes)]
+
     # Convert columns 'from' and 'to' to numeric to avoid errors
-    data[from_col] = pd.to_numeric(data[from_col], errors='coerce')
-    data[to_col] = pd.to_numeric(data[to_col], errors='coerce')
+    data_filtered[from_col] = pd.to_numeric(data_filtered[from_col], errors='coerce')
+    data_filtered[to_col] = pd.to_numeric(data_filtered[to_col], errors='coerce')
 
     # Calculate interval midpoint
-    data.loc[:, 'Interval Midpoint'] = (data[from_col] + data[to_col]) / 2
+    data_filtered.loc[:, 'Interval Midpoint'] = (data_filtered[from_col] + data_filtered[to_col]) / 2
     
     # Prepare data for melting (plotting)
     id_vars = [holeid_col, from_col, to_col, 'Interval Midpoint'] + hover_data_options + [selected_color_column]
-    melted_data = data.melt(id_vars=id_vars, value_vars=selected_analytes, var_name='Analyte', value_name='Result')
+    melted_data = data_filtered.melt(id_vars=id_vars, value_vars=selected_analytes, var_name='Analyte', value_name='Result')
 
-    # Create the scatter plot with color reflecting the selected variable (Lithology)
+    # Create the scatter plot with color reflecting the selected variable (Lithology or Copper_pct)
     downholeplot = px.scatter(
         melted_data, 
         x='Result',  # Plot the selected analyte (e.g., Cu_pct) on the x-axis
@@ -140,6 +146,7 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     
     # Display the plot
     st.plotly_chart(downholeplot, key="downholeplot")
+
 
 
 # Calculcate unique combos of values
