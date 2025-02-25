@@ -120,7 +120,7 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
         x='Result', 
         y='Interval Midpoint', 
         color=selected_color_column,  # Color the lines based on this selected column
-        line_group=holeid_col,  # Group the lines by drill hole
+        line_group=holeid_col,  # Group the lines by drill hole (independent of color)
         markers=True, 
         facet_col='Analyte',  # Facet by analyte if there are multiple
         facet_col_wrap=4, 
@@ -146,7 +146,6 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     
     # Display the plot
     st.plotly_chart(downholeplot, key="downholeplot")
-
 
 
 # Calculcate unique combos of values
