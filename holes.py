@@ -94,19 +94,14 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     selected_analytes = st.multiselect("Select variable to plot", options=data.columns, default=st.session_state.get('selected_analytes', []))
     st.session_state['selected_analytes'] = selected_analytes
     
-    # Allow user to select the column by which to color the line (e.g., 'Result' or any numeric column)
-    available_color_columns = [col for col in data.columns]
+    # Allow user to select the column by which to color the lines (e.g., lithological boundaries)
+    available_color_columns = [col for col in data.columns if col not in [holeid_col, from_col, to_col]]
     selected_color_column = st.selectbox("Select Color", options=available_color_columns, index=st.session_state.get('selected_color_index', 0))
     st.session_state['selected_color_index'] = available_color_columns.index(selected_color_column)
     
     # Allow user to select hover data options
     hover_data_options = st.multiselect("Select hover data", options=data.columns, default=st.session_state.get('hover_data_options', []))
     st.session_state['hover_data_options'] = hover_data_options
-
-    # Allow user to select the column by which to group the lines (this replaces line_group=holeid_col)
-    available_groupby_columns = [col for col in data.columns]
-    selected_groupby_column = st.selectbox("Select Grouping Variable", options=available_groupby_columns, index=st.session_state.get('selected_groupby_index', 0))
-    st.session_state['selected_groupby_index'] = available_groupby_columns.index(selected_groupby_column)
 
     # Convert columns 'from' and 'to' to numeric to avoid errors
     data[from_col] = pd.to_numeric(data[from_col], errors='coerce')
@@ -118,25 +113,23 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     # Prepare data for melting (plotting)
     id_vars = [holeid_col, from_col, to_col, 'Interval Midpoint'] + hover_data_options + [selected_color_column]
     melted_data = data.melt(id_vars=id_vars, value_vars=selected_analytes, var_name='Analyte', value_name='Result')
-    st.write(melted_data)
-    st.write(selected_color_column)
-    st.write(selected_groupby_column)
-    # Create the plot where the line color is based on the selected column, and the lines are grouped by the user-selected group variable
+    
+    # Create the plot where the line color is based on the selected color column, and the lines are grouped by drill hole
     downholeplot = px.line(
         melted_data, 
         x='Result', 
         y='Interval Midpoint', 
-        color=selected_color_column,  # Color the lines based on this selected column
-        line_group=selected_groupby_column,  # Group the lines by user-selected column
+        color=selected_color_column,  # Color the lines based on this selected column (e.g., lithological boundary)
+        line_group=holeid_col,  # Group the lines by drill hole
         markers=True, 
-        facet_col='Analyte',  # Facet by analyte if there are multiple
-        facet_col_wrap=4, 
-        hover_data={col: True for col in hover_data_options}
+        facet_col='Analyte',  # Facet by analyte (separate subplots for each)
+        facet_col_wrap=4,  # Number of subplots in one row
+        hover_data={col: True for col in hover_data_options}  # Add hover data
     )
     
     # Update plot axes and layout
-    downholeplot.update_yaxes(autorange='reversed')
-    downholeplot.update_xaxes(matches=None)
+    downholeplot.update_yaxes(autorange='reversed')  # Reverse the y-axis to make it represent depth
+    downholeplot.update_xaxes(matches=None)  # Disable the matching of x-axes for faceted plots
     
     # Add sliders for adjusting plot size dynamically
     stretchy_height = st.slider("Slide to stretch the y-axis", min_value=300, max_value=5000, value=1800, step=10, key="stretchy_height")
@@ -153,6 +146,7 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     
     # Display the plot
     st.plotly_chart(downholeplot, key="downholeplot")
+
 
 
 # Calculcate unique combos of values
