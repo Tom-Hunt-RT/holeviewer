@@ -89,10 +89,6 @@ def filterdata(filters, data):
     return data
 
 # Downhole plots
-import plotly.express as px
-import pandas as pd
-import streamlit as st
-
 def createdownholeplots(data, holeid_col, from_col, to_col):
     # Allow user to select the analytes they want to plot
     selected_analytes = st.multiselect("Select variable to plot", options=data.columns, default=st.session_state.get('selected_analytes', []))
@@ -117,14 +113,14 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     # Prepare data for melting (plotting)
     id_vars = [holeid_col, from_col, to_col, 'Interval Midpoint'] + hover_data_options + [selected_color_column]
     melted_data = data.melt(id_vars=id_vars, value_vars=selected_analytes, var_name='Analyte', value_name='Result')
-    
+
     # Create the line plot with color reflecting the selected variable (Lithology)
     downholeplot = px.line(
         melted_data, 
         x='Result',  # Plot the selected analyte (e.g., Cu_pct) on the x-axis
         y='Interval Midpoint',  # Plot depth (midpoint of the interval) on the y-axis
         color=selected_color_column,  # Color each point by lithology (or another variable)
-        line_group=holeid_col,  # Group by drill hole (Holeid) to create separate traces
+        line_group=holeid_col,  # Group by drill hole (Holeid) to create separate traces for each drill hole
         markers=True,  # Show markers for each depth interval
         hover_data={col: True for col in hover_data_options},  # Hover data options
         title="Downhole Plot"
@@ -146,9 +142,6 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
     
     # Display the plot
     st.plotly_chart(downholeplot, key="downholeplot")
-
-
-
 
 # Calculcate unique combos of values
 def variabilityanalysis(data, holeid_col, from_col, to_col):
