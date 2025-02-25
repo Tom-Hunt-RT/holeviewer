@@ -90,64 +90,27 @@ def filterdata(filters, data):
 
 # Downhole plots
 def createdownholeplots(data, holeid_col, from_col, to_col):
-    # Allow user to select which drill holes to plot
-    selected_drillholes = st.multiselect("Select Drill Holes", options=data[holeid_col].unique(), default=data[holeid_col].unique())
-    
-    # Allow user to select the analyte variable to plot
     selected_analytes = st.multiselect("Select variable to plot", options=data.columns, default=st.session_state.get('selected_analytes', []))
     st.session_state['selected_analytes'] = selected_analytes
-    
-    # Allow user to select the column by which to color the points (e.g., Lithology)
-    available_color_columns = [col for col in data.columns if col not in [holeid_col, from_col, to_col]]
-    selected_color_column = st.selectbox("Select Color by Column", options=available_color_columns, index=st.session_state.get('selected_color_index', 0))
-    st.session_state['selected_color_index'] = available_color_columns.index(selected_color_column)
-    
-    # Allow user to select hover data options
+    selected_color = st.selectbox("Select Colour", options=data.columns, index=st.session_state.get('selected_color_index', 0))
+    st.session_state['selected_color_index'] = data.columns.get_loc(selected_color)
     hover_data_options = st.multiselect("Select hover data", options=data.columns, default=st.session_state.get('hover_data_options', []))
     st.session_state['hover_data_options'] = hover_data_options
 
-    # Filter data for selected drill holes
-    data_filtered = data[data[holeid_col].isin(selected_drillholes)]
-
-    # Convert columns 'from' and 'to' to numeric to avoid errors
-    data_filtered[from_col] = pd.to_numeric(data_filtered[from_col], errors='coerce')
-    data_filtered[to_col] = pd.to_numeric(data_filtered[to_col], errors='coerce')
-
-    # Calculate interval midpoint
-    data_filtered.loc[:, 'Interval Midpoint'] = (data_filtered[from_col] + data_filtered[to_col]) / 2
+    data[from_col] = pd.to_numeric(data[from_col], errors='coerce')
+    data[to_col] = pd.to_numeric(data[to_col], errors='coerce')
+    data.loc[:, 'Interval Midpoint'] = (data[from_col] + data[to_col]) / 2
     
-    # Prepare data for melting (plotting)
-    id_vars = [holeid_col, from_col, to_col, 'Interval Midpoint'] + hover_data_options + [selected_color_column]
-    melted_data = data_filtered.melt(id_vars=id_vars, value_vars=selected_analytes, var_name='Analyte', value_name='Result')
+    id_vars = [holeid_col, from_col, to_col, 'Interval Midpoint'] + hover_data_options
+    melted_data = data.melt(id_vars=id_vars, value_vars=selected_analytes, var_name='Analyte', value_name='Result')
 
-    # Create the scatter plot with color reflecting the selected variable (Lithology or Copper_pct)
-    downholeplot = px.scatter(
-        melted_data, 
-        x='Result',  # Plot the selected analyte (e.g., Cu_pct) on the x-axis
-        y='Interval Midpoint',  # Plot depth (midpoint of the interval) on the y-axis
-        color=selected_color_column,  # Color each point by lithology (or another variable)
-        symbol=holeid_col,  # Use a unique symbol for each HoleID, so that each drill hole is represented separately
-        title="Downhole Plot"
-    )
-    
-    # Update the plot layout
-    downholeplot.update_yaxes(autorange='reversed')  # Reverse the y-axis for depth representation
-    downholeplot.update_xaxes(title='Analyte Value (e.g., Cu_pct)')
-    downholeplot.update_yaxes(title='Depth (Interval Midpoint)')
-    
-    # Update the plot size dynamically based on user input
+    downholeplot = px.line(melted_data, x='Result', y='Interval Midpoint', color=selected_color, line_group=holeid_col, markers=True, facet_col='Analyte', facet_col_wrap=4, hover_data={col: True for col in hover_data_options})
+    downholeplot.update_yaxes(autorange='reversed')
+    downholeplot.update_xaxes(matches=None)
     stretchy_height = st.slider("Slide to stretch the y-axis", min_value=300, max_value=5000, value=1800, step=10, key="stretchy_height")
     stretchy_width = st.slider("Slide to stretch the x-axis", min_value=300, max_value=5000, value=1800, step=10, key="stretchy_width")
-    
-    downholeplot.update_layout(
-        height=stretchy_height, 
-        width=stretchy_width
-    )
-    
-    # Display the plot
+    downholeplot.update_layout(xaxis_title='Results', yaxis_title='Interval Midpoint', title='Results by Drill Hole and Interval Midpoint', height=stretchy_height, width=stretchy_width)
     st.plotly_chart(downholeplot, key="downholeplot")
-
-
 
 # Calculcate unique combos of values
 def variabilityanalysis(data, holeid_col, from_col, to_col):
@@ -159,12 +122,6 @@ def variabilityanalysis(data, holeid_col, from_col, to_col):
     # Ensure that valid selections are made
     if not groupby_columns or not value_column:
         return pd.DataFrame(columns=['Combination', 'Count', 'Counts_Percentage', 'Mean Value', 'Median Value', 'Min Value', 'Max Value', 'Range'])
-
-    # Convert the value column to numeric, coercing errors to NaN
-    data[value_column] = pd.to_numeric(data[value_column], errors='coerce')
-
-    # Drop rows with NaN values in the value column
-    data = data.dropna(subset=[value_column])
 
     # Perform the analysis if valid selections are made
     data['unique_id'] = data[holeid_col].astype(str) + '_' + data[from_col].astype(str) + '_' + data[to_col].astype(str)
