@@ -114,10 +114,8 @@ def createdownholeplots(data, holeid_col, from_col, to_col):
 
 # Calculcate unique combos of values
 def variabilityanalysis(data, holeid_col, from_col, to_col):
-    groupby_columns = st.multiselect("Select columns to group by", options=data.columns, default=st.session_state.get('variability_groupby_columns', []))
-    st.session_state['variability_groupby_columns'] = groupby_columns
-    value_column = st.selectbox("Select value column to average", options=data.columns, index=st.session_state.get('variability_value_col_index', 0))
-    st.session_state['variability_value_col_index'] = data.columns.get_loc(value_column)
+    groupby_columns = st.multiselect("Select columns to group by", options=data.columns)
+    value_column = st.selectbox("Select value column to average", options=data.columns)
 
     # Ensure that valid selections are made
     if not groupby_columns or not value_column:
